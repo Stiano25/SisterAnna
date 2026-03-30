@@ -16,7 +16,7 @@ const MissionPage: React.FC<MissionPageProps> = ({ onBack }) => {
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
     >
       <div className="sticky top-0 z-10 spiritual-header border-b border-memorial-line">
-        <div className="flex items-center justify-between p-8">
+        <div className="flex items-center justify-between p-4 sm:p-8">
           <div className="flex items-center gap-5">
             <motion.button
               onClick={onBack}
@@ -26,15 +26,17 @@ const MissionPage: React.FC<MissionPageProps> = ({ onBack }) => {
             >
               <ArrowLeft className="w-6 h-6" strokeWidth={1.5} />
             </motion.button>
-            <h1 className="font-sans text-2xl italic text-memorial-ink font-bold">Mother&apos;s Home Project</h1>
+            <h1 className="font-sans text-xl sm:text-2xl italic text-memorial-ink font-bold">
+              Mother&apos;s Home Project
+            </h1>
           </div>
           <Compass className="w-10 h-10 text-memorial-accent" strokeWidth={0.8} />
         </div>
       </div>
 
-      <div className="p-8 spiritual-inset space-y-8">
+      <div className="p-4 sm:p-8 spiritual-inset space-y-8">
         <motion.blockquote
-          className="spiritual-quote border-l-4 border-memorial-accent pl-8 bg-memorial-card/70 p-6 rounded-r-2xl shadow-sm"
+          className="spiritual-quote border-l-4 border-memorial-accent pl-4 sm:pl-8 bg-memorial-card/70 p-6 rounded-r-2xl shadow-sm"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
         >

@@ -40,7 +40,7 @@ const MissionCard: React.FC<MissionCardProps> = ({ card }) => {
 
   return (
     <motion.div
-      className="border border-memorial-line rounded-2xl p-8 hover:border-memorial-accent/50 spiritual-card-depth transition-all duration-300 group relative overflow-hidden bg-memorial-card"
+      className="border border-memorial-line rounded-2xl p-6 sm:p-8 hover:border-memorial-accent/50 spiritual-card-depth transition-all duration-300 group relative overflow-hidden bg-memorial-card"
       whileHover="hover"
       initial="initial"
     >
@@ -58,7 +58,7 @@ const MissionCard: React.FC<MissionCardProps> = ({ card }) => {
         <div className="text-xs uppercase tracking-[0.15em] text-memorial-muted font-bold">
           {card.eyebrow}
         </div>
-        <div className={`flex items-center gap-3 px-4 py-2 rounded-full ${status.bgColor} border border-memorial-line`}>
+        <div className={`flex items-center gap-3 px-3 sm:px-4 py-2 rounded-full ${status.bgColor} border border-memorial-line`}>
           <motion.div
             animate={card.status === 'in-progress' ? { rotate: 360 } : {}}
             transition={card.status === 'in-progress' ? { 
@@ -75,7 +75,7 @@ const MissionCard: React.FC<MissionCardProps> = ({ card }) => {
         </div>
       </div>
 
-      <h3 className="font-sans text-2xl text-memorial-ink mb-4 leading-tight font-bold">
+      <h3 className="font-sans text-xl sm:text-2xl text-memorial-ink mb-4 leading-tight font-bold">
         {card.title}
       </h3>
 

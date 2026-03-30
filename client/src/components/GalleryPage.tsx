@@ -16,7 +16,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onBack }) => {
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
     >
       <div className="sticky top-0 z-10 spiritual-header border-b border-memorial-line">
-        <div className="flex items-center justify-between p-8">
+        <div className="flex items-center justify-between p-4 sm:p-8">
           <div className="flex items-center gap-5">
             <motion.button
               onClick={onBack}
@@ -26,7 +26,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onBack }) => {
             >
               <ArrowLeft className="w-6 h-6" strokeWidth={1.5} />
             </motion.button>
-            <h1 className="font-sans text-2xl italic text-memorial-ink font-bold">
+            <h1 className="font-sans text-xl sm:text-2xl italic text-memorial-ink font-bold">
               Gallery
             </h1>
           </div>
@@ -34,8 +34,8 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onBack }) => {
         </div>
       </div>
 
-      <div className="p-8 spiritual-inset">
-        <div className="rounded-2xl border border-dashed border-memorial-line bg-memorial-card spiritual-card-depth p-12 text-center">
+      <div className="p-4 sm:p-8 spiritual-inset">
+        <div className="rounded-2xl border border-dashed border-memorial-line bg-memorial-card spiritual-card-depth p-8 sm:p-12 text-center">
           <ImageIcon className="w-14 h-14 text-memorial-accent/50 mx-auto mb-6" strokeWidth={0.9} />
           <p className="text-memorial-muted text-lg leading-relaxed max-w-sm mx-auto">
             The images aren&apos;t uploaded yet. Please check back soon.

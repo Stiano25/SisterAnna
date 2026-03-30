@@ -118,7 +118,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onNavigate }) => {
 
   if (loading) {
     return (
-      <div className="p-8 flex justify-center">
+      <div className="p-4 sm:p-8 flex justify-center">
         <div className="text-memorial-muted font-medium">Searching...</div>
       </div>
     )
@@ -127,7 +127,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onNavigate }) => {
   if (results.length === 0) {
     return (
       <motion.div
-        className="p-8 flex flex-col items-center justify-center text-center py-16"
+        className="p-4 sm:p-8 flex flex-col items-center justify-center text-center py-16"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
@@ -144,7 +144,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onNavigate }) => {
 
   return (
     <motion.div
-      className="p-8"
+      className="p-4 sm:p-8"
       variants={containerVariants}
       initial="hidden"
       animate="visible"

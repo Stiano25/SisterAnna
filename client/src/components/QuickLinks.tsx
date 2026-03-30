@@ -30,7 +30,7 @@ const QuickLinks: React.FC<QuickLinksProps> = ({ onNavigate }) => {
   }
 
   return (
-    <div className="px-8 pb-8">
+    <div className="px-4 sm:px-8 pb-6 sm:pb-8">
       <motion.div
         variants={containerVariants}
         initial="hidden"

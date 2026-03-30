@@ -5,14 +5,17 @@ import type { ContentCard as ContentCardType } from '../types'
 
 interface ContentCardProps {
   card: ContentCardType
+  onOpen?: (card: ContentCardType) => void
 }
 
-const ContentCard: React.FC<ContentCardProps> = ({ card }) => {
+const ContentCard: React.FC<ContentCardProps> = ({ card, onOpen }) => {
   return (
-    <motion.div
-      className="border border-memorial-line rounded-2xl p-8 hover:border-memorial-accent/50 spiritual-card-depth transition-all duration-300 cursor-pointer group relative overflow-hidden bg-memorial-card"
+    <motion.button
+      type="button"
+      className="border border-memorial-line rounded-2xl p-6 sm:p-8 hover:border-memorial-accent/50 spiritual-card-depth transition-all duration-300 cursor-pointer group relative overflow-hidden bg-memorial-card"
       whileHover="hover"
       initial="initial"
+      onClick={() => onOpen?.(card)}
     >
       <motion.div
         className="absolute top-0 left-0 h-1 bg-memorial-accent"
@@ -28,7 +31,7 @@ const ContentCard: React.FC<ContentCardProps> = ({ card }) => {
         {card.eyebrow}
       </div>
 
-      <h3 className="font-sans text-2xl text-memorial-ink mb-4 leading-tight font-bold">
+      <h3 className="font-sans text-xl sm:text-2xl text-memorial-ink mb-4 leading-tight font-bold">
         {card.title}
       </h3>
 
@@ -37,7 +40,7 @@ const ContentCard: React.FC<ContentCardProps> = ({ card }) => {
       </p>
 
       <div className="flex items-center justify-between">
-        <span className="text-sm text-memorial-muted bg-memorial-line/50 px-4 py-2 rounded-full font-bold">
+        <span className="text-sm text-memorial-muted bg-memorial-line/50 px-3 sm:px-4 py-2 rounded-full font-bold">
           {card.tag}
         </span>
         <motion.div
@@ -51,7 +54,7 @@ const ContentCard: React.FC<ContentCardProps> = ({ card }) => {
           <ArrowRight className="w-5 h-5" strokeWidth={1.5} />
         </motion.div>
       </div>
-    </motion.div>
+    </motion.button>
   )
 }
 

@@ -40,7 +40,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-memorial spiritual-root">
-      <div className="mx-auto max-w-app">
+      <div className="mx-auto w-full max-w-none px-4 sm:px-0">
         <AnimatePresence mode="wait" custom={direction}>
           {renderPage()}
         </AnimatePresence>

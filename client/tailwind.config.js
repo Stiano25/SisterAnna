@@ -21,7 +21,9 @@ export default {
         },
       },
       maxWidth: {
-        'app': '480px'
+        // Allow `sm:` styles to activate on laptops/desktops.
+        // Previously capped at 480px, which kept the app in "mobile" layout mode.
+        'app': '720px'
       },
       spacing: {
         '18': '4.5rem',

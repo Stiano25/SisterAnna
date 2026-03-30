@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, Eye, Cross } from 'lucide-react'
 import ContentCard from './ContentCard'
 import StoryIntroModal from './StoryIntroModal'
+import StoryReadingView from './StoryReadingView'
 import { categories } from '../data/content'
 import type { PageId, ContentCard as ContentCardType } from '../types'
 
@@ -142,6 +143,7 @@ const pageContent: Record<string, { quote: string; sections: StorySection[] }> =
 const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
   const [content, setContent] = useState<{ quote: string; sections: StorySection[] } | null>(null)
   const [activeSectionId, setActiveSectionId] = useState('')
+  const [activeCard, setActiveCard] = useState<ContentCardType | null>(null)
 
   const category = categories.find((c) => c.id === pageId)
   const IconComponent = category ? iconMap[category.iconName as keyof typeof iconMap] : Cross
@@ -199,65 +201,78 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
     >
       <StoryIntroModal onContinue={() => undefined} />
 
-      <div className="sticky top-0 z-10 spiritual-header border-b border-memorial-line">
-        <div className="flex items-center justify-between p-8">
-          <div className="flex items-center gap-5">
-            <motion.button
-              onClick={onBack}
-              className="p-3 rounded-full border border-memorial-line hover:bg-memorial-card/80 spiritual-depth transition-all duration-200 min-h-[48px] min-w-[48px] flex items-center justify-center text-memorial-accent"
-              whileTap={{ scale: 0.95 }}
-              whileHover={{ x: -2 }}
-            >
-              <ArrowLeft className="w-6 h-6" strokeWidth={1.5} />
-            </motion.button>
-            <h1 className="font-sans text-2xl italic text-memorial-ink font-bold">{category.label}</h1>
-          </div>
-          <IconComponent className="w-10 h-10 text-memorial-accent" strokeWidth={0.8} />
-        </div>
-      </div>
-
-      <div className="p-8 spiritual-inset">
-        <motion.blockquote
-          className="spiritual-quote border-l-4 border-memorial-accent pl-8 mb-8 bg-memorial-card/60 p-6 rounded-r-2xl shadow-sm"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <p className="font-sans text-xl italic text-memorial-muted leading-relaxed">{content.quote}</p>
-        </motion.blockquote>
-
-        <div className="mb-6 overflow-x-auto">
-          <div className="inline-flex gap-2 min-w-full pb-1">
-            {content.sections.map((section) => {
-              const active = section.id === activeSection.id
-              return (
-                <button
-                  key={section.id}
-                  type="button"
-                  onClick={() => setActiveSectionId(section.id)}
-                  className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border transition-colors ${
-                    active
-                      ? 'bg-memorial-accent text-memorial-card border-memorial-accent'
-                      : 'bg-memorial-card text-memorial-muted border-memorial-line hover:border-memorial-accent/60'
-                  }`}
+      {activeCard ? (
+        <StoryReadingView
+          card={activeCard}
+          onBack={() => setActiveCard(null)}
+          categoryLabel={category.label}
+          CategoryIcon={IconComponent}
+        />
+      ) : (
+        <>
+          <div className="sticky top-0 z-10 spiritual-header border-b border-memorial-line">
+            <div className="flex items-center justify-between p-4 sm:p-8">
+              <div className="flex items-center gap-5">
+                <motion.button
+                  onClick={onBack}
+                  className="p-3 rounded-full border border-memorial-line hover:bg-memorial-card/80 spiritual-depth transition-all duration-200 min-h-[48px] min-w-[48px] flex items-center justify-center text-memorial-accent"
+                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ x: -2 }}
                 >
-                  {section.label}
-                </button>
-              )
-            })}
+                  <ArrowLeft className="w-6 h-6" strokeWidth={1.5} />
+                </motion.button>
+                <h1 className="font-sans text-xl sm:text-2xl italic text-memorial-ink font-bold">
+                  {category.label}
+                </h1>
+              </div>
+              <IconComponent className="w-10 h-10 text-memorial-accent" strokeWidth={0.8} />
+            </div>
           </div>
-        </div>
 
-        <motion.div
-          key={activeSection.id}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
-          {activeSection.cards.map((card) => (
-            <ContentCard key={card.id} card={card} />
-          ))}
-        </motion.div>
-      </div>
+          <div className="p-4 sm:p-8 spiritual-inset">
+            <motion.blockquote
+              className="spiritual-quote border-l-4 border-memorial-accent pl-4 sm:pl-8 mb-6 sm:mb-8 bg-memorial-card/60 p-6 rounded-r-2xl shadow-sm"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <p className="font-sans text-xl italic text-memorial-muted leading-relaxed">{content.quote}</p>
+            </motion.blockquote>
+
+            <div className="mb-6 overflow-x-auto">
+              <div className="inline-flex gap-2 min-w-full pb-1">
+                {content.sections.map((section) => {
+                  const active = section.id === activeSection.id
+                  return (
+                    <button
+                      key={section.id}
+                      type="button"
+                      onClick={() => setActiveSectionId(section.id)}
+                      className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border transition-colors ${
+                        active
+                          ? 'bg-memorial-accent text-memorial-card border-memorial-accent'
+                          : 'bg-memorial-card text-memorial-muted border-memorial-line hover:border-memorial-accent/60'
+                      }`}
+                    >
+                      {section.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <motion.div
+              key={activeSection.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
+              {activeSection.cards.map((card) => (
+                <ContentCard key={card.id} card={card} onOpen={(c) => setActiveCard(c)} />
+              ))}
+            </motion.div>
+          </div>
+        </>
+      )}
     </motion.div>
   )
 }

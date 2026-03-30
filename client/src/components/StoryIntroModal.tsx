@@ -40,7 +40,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
           aria-labelledby="house-fund-title"
         >
           <motion.div
-            className="relative z-[301] spiritual-modal max-w-md w-full max-h-[90dvh] overflow-y-auto p-6 rounded-2xl shadow-2xl border border-memorial-line bg-memorial-card"
+            className="relative z-[301] spiritual-modal max-w-sm sm:max-w-md w-full max-h-[90dvh] overflow-y-auto p-4 sm:p-6 rounded-2xl shadow-2xl border border-memorial-line bg-memorial-card"
             initial={{ opacity: 0, y: 16, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8 }}
@@ -51,7 +51,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
             </p>
             <h2
               id="house-fund-title"
-              className="font-sans text-xl font-bold text-memorial-ink mb-4 leading-snug"
+              className="font-sans text-lg sm:text-xl font-bold text-memorial-ink mb-4 leading-snug"
             >
               A home for Sister Anna&apos;s mother
             </h2>
@@ -61,7 +61,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
             <img
               src="/images/SisterHome.jpg"
               alt="Mother's house project"
-              className="w-full h-52 object-contain rounded-xl border border-memorial-line mb-5 bg-memorial-card p-2"
+              className="w-full h-40 sm:h-52 object-contain rounded-xl border border-memorial-line mb-5 bg-memorial-card p-2"
             />
             <div className="rounded-xl bg-memorial-card border border-memorial-line p-4 mb-6 text-sm text-memorial-muted space-y-2">
               <p className="font-bold text-memorial-ink">Payment details</p>

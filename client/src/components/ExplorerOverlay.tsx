@@ -25,8 +25,10 @@ const ExplorerOverlay: React.FC<ExplorerOverlayProps> = ({ onClose, onNavigate }
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
     >
       <div className="h-full flex flex-col">
-        <div className="flex items-center justify-between p-8 border-b border-memorial-line spiritual-header">
-          <h2 className="font-sans text-2xl italic text-memorial-ink font-bold">Sister Anna Ali</h2>
+        <div className="flex items-center justify-between p-4 sm:p-8 border-b border-memorial-line spiritual-header">
+          <h2 className="font-sans text-xl sm:text-2xl italic text-memorial-ink font-bold">
+            Sister Anna Ali
+          </h2>
           <motion.button
             onClick={onClose}
             className="p-3 rounded-full hover:bg-memorial-card/80 spiritual-depth transition-colors min-h-[48px] min-w-[48px] flex items-center justify-center text-memorial-accent"
@@ -37,7 +39,7 @@ const ExplorerOverlay: React.FC<ExplorerOverlayProps> = ({ onClose, onNavigate }
           </motion.button>
         </div>
 
-        <div className="px-8 pt-6 pb-4 border-b border-memorial-line">
+        <div className="px-4 sm:px-8 pt-4 sm:pt-6 pb-4 border-b border-memorial-line">
           <div className="flex items-end gap-3">
             <Search className="w-5 h-5 text-memorial-accent flex-shrink-0 mb-2.5" strokeWidth={1.5} />
             <div className="flex-1 min-w-0 relative">
