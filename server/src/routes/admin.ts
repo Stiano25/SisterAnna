@@ -174,13 +174,19 @@ router.post('/categories/:categoryId/topics', async (req, res) => {
   const id = `topic_${randomUUID()}`
 
   try {
+    const orderRes = await db.query<{ m: string }>(
+      `SELECT COALESCE(MAX(sortOrder), -1)::text AS m FROM topics WHERE categoryId=$1`,
+      [categoryId]
+    )
+    const sortOrder = Number(orderRes.rows[0]?.m ?? -1) + 1
+
     await db.query(
       `
       INSERT INTO topics (id, categoryId, eyebrow, title, tag, sortOrder, summaryText, updatedAt)
-      VALUES ($1, $2, COALESCE($3,''), $4, COALESCE($5,''), 0, '', NOW())
+      VALUES ($1, $2, COALESCE($3,''), $4, COALESCE($5,''), $6, '', NOW())
       ON CONFLICT (id) DO NOTHING
       `,
-      [id, categoryId, eyebrow ?? '', title, tag ?? '']
+      [id, categoryId, eyebrow ?? '', title, tag ?? '', sortOrder]
     )
 
     // Initialize empty blocks row.
@@ -197,6 +203,36 @@ router.post('/categories/:categoryId/topics', async (req, res) => {
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Failed to create topic' })
+  }
+})
+
+router.put('/categories/:categoryId/topics/order', async (req, res) => {
+  const { categoryId } = req.params
+  const { topicIds } = req.body as { topicIds?: string[] }
+
+  if (!Array.isArray(topicIds) || topicIds.length === 0) {
+    res.status(400).json({ error: 'topicIds is required' })
+    return
+  }
+
+  try {
+    await db.query('BEGIN')
+    for (let i = 0; i < topicIds.length; i++) {
+      await db.query(
+        `
+        UPDATE topics
+        SET sortOrder=$1, updatedAt=NOW()
+        WHERE id=$2 AND categoryId=$3
+        `,
+        [i, topicIds[i], categoryId]
+      )
+    }
+    await db.query('COMMIT')
+    res.json({ ok: true })
+  } catch (err) {
+    await db.query('ROLLBACK')
+    console.error(err)
+    res.status(500).json({ error: 'Failed to reorder topics' })
   }
 })
 

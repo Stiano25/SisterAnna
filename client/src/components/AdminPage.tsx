@@ -417,6 +417,29 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     })
   }
 
+  const reorderTopics = async (fromIndex: number, toIndex: number) => {
+    if (!selectedCategoryId) return
+    if (toIndex < 0 || toIndex >= topics.length) return
+
+    const next = [...topics]
+    ;[next[fromIndex], next[toIndex]] = [next[toIndex], next[fromIndex]]
+    setTopics(next)
+
+    setError(null)
+    setLoading(true)
+    try {
+      await apiFetch(`/admin/categories/${selectedCategoryId}/topics/order`, {
+        method: 'PUT',
+        body: JSON.stringify({ topicIds: next.map((t) => t.id) })
+      })
+    } catch (e) {
+      setError((e as Error).message)
+      await fetchTopics(selectedCategoryId)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const canContinueToTopics = Boolean(selectedCategoryId)
 
   return (
@@ -707,7 +730,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                     </button>
                   </div>
                   <div className="space-y-2 max-h-[55vh] overflow-y-auto pr-1">
-                    {topics.map((t) => (
+                    {topics.map((t, idx) => (
                       <button
                         key={t.id}
                         type="button"
@@ -719,6 +742,32 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                         }`}
                         disabled={loading}
                       >
+                        <div className="flex items-center justify-end gap-1 mb-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void reorderTopics(idx, idx - 1)
+                            }}
+                            className="p-1 rounded border border-memorial-line hover:border-memorial-accent/60 text-xs"
+                            disabled={loading || idx === 0}
+                            aria-label="Move topic up"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void reorderTopics(idx, idx + 1)
+                            }}
+                            className="p-1 rounded border border-memorial-line hover:border-memorial-accent/60 text-xs"
+                            disabled={loading || idx === topics.length - 1}
+                            aria-label="Move topic down"
+                          >
+                            ↓
+                          </button>
+                        </div>
                         <div
                           className={`text-xs uppercase tracking-[0.1em] mb-2 font-bold ${
                             t.id === selectedTopicId ? 'text-memorial-card/90' : 'text-memorial-muted'
