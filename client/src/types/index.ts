@@ -5,7 +5,14 @@ export interface ContentCard {
   title: string
   body: string
   tag: string
+  // When stored in Neon, story content can be a sequence of blocks.
+  // We keep `body` for backwards compatibility (topic cards preview).
+  blocks?: ContentBlock[]
 }
+
+export type ContentBlock =
+  | { type: 'text'; value: string }
+  | { type: 'image'; imageId: string }
 
 export interface Category {
   id: string
@@ -26,10 +33,5 @@ export interface MissionCard extends ContentCard {
   supportLink?: string
 }
 
-export type PageId =
-  | 'home'
-  | 'visions'
-  | 'life'
-  | 'mission'
-  | 'gallery'
-  | 'search'
+/** Any route id (known pages + dynamic section ids from the database). */
+export type PageId = string

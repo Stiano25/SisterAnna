@@ -28,7 +28,7 @@ export interface MissionCard extends ContentCard {
 
 export const categories: Category[] = [
   { id: 'visions', label: 'Visions', sublabel: 'Divine encounters', iconName: 'Eye' },
-  { id: 'life', label: 'Her Life', sublabel: 'Journey of faith', iconName: 'Cross' },
+  { id: 'life', label: 'Personal life', sublabel: 'Her journey', iconName: 'Cross' },
   { id: 'stigmata', label: 'Stigmata', sublabel: 'Sacred wounds', iconName: 'Droplets' },
   { id: 'miracles', label: 'Miracles', sublabel: 'Divine works', iconName: 'Sparkles' },
   { id: 'book', label: 'Her Book', sublabel: 'Divine teachings', iconName: 'BookOpen' },
@@ -71,6 +71,14 @@ export const allContent: ContentCard[] = [
   },
 
   // Her Life
+  {
+    id: 'demo-about-memorial',
+    pageId: 'life',
+    eyebrow: 'How to read this site',
+    title: 'About the memorial fields',
+    body: 'The small line above the headline is the context line (often a date, place, or theme). The large line is the story title. The rounded badge under the title is the topic tag. This sample card appears on fresh database installs so you can match admin labels to what visitors see.',
+    tag: 'Editor sample'
+  },
   {
     id: 'birth-kipkelion',
     pageId: 'life',

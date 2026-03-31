@@ -1,7 +1,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
-import type { ContentCard } from '../types'
+import type { ContentBlock, ContentCard } from '../types'
 
 interface StoryReadingViewProps {
   card: ContentCard
@@ -17,6 +17,11 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
   categoryLabel,
   CategoryIcon
 }) => {
+  const blocks: ContentBlock[] =
+    card.blocks && card.blocks.length > 0
+      ? card.blocks
+      : [{ type: 'text', value: card.body } as ContentBlock]
+
   return (
     <motion.div
       key={card.id}
@@ -65,19 +70,34 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
             </div>
           </div>
 
-          {/* Image placeholder: when image fields are added to cards, wire them here. */}
-          <div className="w-full rounded-2xl border border-memorial-line bg-memorial-card/60 overflow-hidden">
-            <div className="aspect-[16/9] flex items-center justify-center p-4">
-              <p className="text-sm text-memorial-muted text-center">
-                Image will appear here when available.
-              </p>
-            </div>
-          </div>
+          <div className="space-y-4">
+            {blocks.map((block, idx) => {
+              if (block.type === 'image') {
+                return (
+                  <div
+                    key={`${block.imageId}_${idx}`}
+                    className="w-full rounded-2xl border border-memorial-line bg-memorial-card/60 overflow-hidden"
+                  >
+                    <img
+                      src={`/api/images/${block.imageId}`}
+                      alt={card.title}
+                      className="w-full max-h-[70vh] object-contain bg-memorial-card"
+                    />
+                  </div>
+                )
+              }
 
-          <div className="border border-memorial-line bg-memorial-card/40 rounded-2xl p-4 sm:p-6">
-            <p className="text-base sm:text-lg text-memorial-muted leading-relaxed whitespace-pre-wrap">
-              {card.body}
-            </p>
+              return (
+                <div
+                  key={`text_${idx}`}
+                  className="border border-memorial-line bg-memorial-card/40 rounded-2xl p-4 sm:p-6"
+                >
+                  <p className="text-base sm:text-lg text-memorial-muted leading-relaxed whitespace-pre-wrap">
+                    {block.value}
+                  </p>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>

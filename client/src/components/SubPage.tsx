@@ -264,7 +264,7 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
               key={activeSection.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
             >
               {activeSection.cards.map((card) => (
                 <ContentCard key={card.id} card={card} onOpen={(c) => setActiveCard(c)} />

@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion'
 import { useNavigation } from './hooks/useNavigation'
 import HeroScreen from './components/HeroScreen'
 import ExplorerOverlay from './components/ExplorerOverlay'
+import AdminPage from './components/AdminPage'
 
 const SubPage = lazy(() => import('./components/SubPage'))
 const MissionPage = lazy(() => import('./components/MissionPage'))
@@ -29,6 +30,8 @@ function App() {
         )
       case 'search':
         return <ExplorerOverlay onClose={reset} onNavigate={goTo} />
+      case 'admin':
+        return <AdminPage onBack={goBack} />
       default:
         return (
           <Suspense fallback={<div className="min-h-screen bg-memorial spiritual-page" />}>
