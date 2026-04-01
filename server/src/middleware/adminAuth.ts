@@ -1,12 +1,53 @@
 import type { Request, Response, NextFunction } from 'express'
-import { randomUUID } from 'crypto'
+import { createHmac, timingSafeEqual } from 'crypto'
 import { dbEnabled, pool } from '../db.js'
 
-const sessions = new Map<string, string>()
+const TOKEN_TTL_SECONDS = 60 * 60 * 12 // 12 hours
+const signingSecret = process.env.ADMIN_TOKEN_SECRET || process.env.ADMIN_PASSWORD || 'sister-anna-admin-secret'
 
 interface LoginBody {
   email?: string
   password?: string
+}
+
+function toBase64Url(value: string) {
+  return Buffer.from(value, 'utf8').toString('base64url')
+}
+
+function signPayload(payloadBase64: string) {
+  return createHmac('sha256', signingSecret).update(payloadBase64).digest('base64url')
+}
+
+function createToken(email: string) {
+  const payload = JSON.stringify({
+    email,
+    exp: Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS
+  })
+  const payloadBase64 = toBase64Url(payload)
+  const signature = signPayload(payloadBase64)
+  return `${payloadBase64}.${signature}`
+}
+
+function verifyToken(token: string) {
+  const [payloadBase64, signature] = token.split('.')
+  if (!payloadBase64 || !signature) return false
+  const expectedSignature = signPayload(payloadBase64)
+  const expected = Buffer.from(expectedSignature)
+  const actual = Buffer.from(signature)
+  if (expected.length !== actual.length) return false
+  if (!timingSafeEqual(expected, actual)) return false
+
+  try {
+    const payload = JSON.parse(Buffer.from(payloadBase64, 'base64url').toString('utf8')) as {
+      email?: string
+      exp?: number
+    }
+    if (!payload.email || !payload.exp) return false
+    if (payload.exp < Math.floor(Date.now() / 1000)) return false
+    return true
+  } catch {
+    return false
+  }
 }
 
 export async function adminLogin(req: Request, res: Response) {
@@ -35,8 +76,7 @@ export async function adminLogin(req: Request, res: Response) {
     return
   }
 
-  const token = randomUUID()
-  sessions.set(token, admin.email)
+  const token = createToken(admin.email)
   res.json({ token })
 }
 
@@ -50,7 +90,7 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   }
 
   const token = authHeader.slice('Bearer '.length)
-  if (!sessions.has(token)) {
+  if (!verifyToken(token)) {
     res.status(401).json({ error: 'Unauthorized' })
     return
   }
