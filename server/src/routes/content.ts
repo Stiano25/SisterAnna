@@ -4,6 +4,42 @@ import { pool, dbEnabled } from '../db.js'
 
 const router = express.Router()
 
+const VALID_MISSION_STATUS = new Set(['in-progress', 'unfunded', 'ongoing', 'planned'])
+
+function normalizeMissionStatus(s: string | null | undefined): 'in-progress' | 'unfunded' | 'ongoing' | 'planned' {
+  if (s && VALID_MISSION_STATUS.has(s)) return s as 'in-progress' | 'unfunded' | 'ongoing' | 'planned'
+  return 'ongoing'
+}
+
+const quotes: Record<string, string> = {
+  visions: 'I saw Jesus Christ in a vision. He spoke to me about the Eucharist and the need for devotion.',
+  life: 'She was born Hadija, but God called her to become Sister Anna Ali, a vessel of His mercy.',
+  stigmata: 'Every Thursday for 25 years, she wept tears of blood, sharing in Christ\'s passion.',
+  miracles: 'Even in death, God continues to work wonders through her intercession.',
+  book: 'Her book contains the divine messages she received about the Eucharist and proper worship.',
+  mission: 'Her mission continues through those who carry forward her work of mercy and devotion.'
+}
+
+function mapDbTopicRow(r: any, pageId: string) {
+  const base = {
+    id: r.id,
+    pageId: r.categoryId ?? r.pageId,
+    eyebrow: r.eyebrow,
+    title: r.title,
+    tag: r.tag,
+    body: r.body,
+    blocks: r.blocks
+  }
+  if (pageId === 'mission' || r.mission_status != null || (r.support_link != null && r.support_link !== '')) {
+    return {
+      ...base,
+      status: normalizeMissionStatus(r.mission_status),
+      ...(r.support_link ? { supportLink: r.support_link } : {})
+    }
+  }
+  return base
+}
+
 // Get all categories
 router.get('/categories', (req, res) => {
   if (!dbEnabled || !pool) {
@@ -24,11 +60,21 @@ router.get('/categories', (req, res) => {
 // Get all content
 router.get('/content', (req, res) => {
   if (!dbEnabled || !pool) {
+    const missionAsTopics = missionCards.map((m) => ({
+      id: m.id,
+      pageId: m.pageId,
+      eyebrow: m.eyebrow,
+      title: m.title,
+      tag: m.tag,
+      body: m.body,
+      blocks: [{ type: 'text', value: m.body }],
+      status: m.status,
+      ...(m.supportLink ? { supportLink: m.supportLink } : {})
+    }))
     res.json({
       categories,
       quickLinks,
-      content: allContent,
-      missionCards
+      content: [...allContent, ...missionAsTopics]
     })
     return
   }
@@ -44,10 +90,12 @@ router.get('/content', (req, res) => {
         t.tag,
         t.summaryText AS body,
         t.sortOrder,
+        t.mission_status,
+        t.support_link,
         cb.blocks
       FROM topics t
       JOIN topic_content_blocks cb ON cb.topicId = t.id
-      ORDER BY t.sortOrder, t.updatedAt DESC
+      ORDER BY t.categoryId, t.sortOrder, t.updatedAt DESC
       `
     )
   ])
@@ -60,8 +108,7 @@ router.get('/content', (req, res) => {
           iconName: c.iconName
         })),
         quickLinks,
-        content: topicsRes.rows,
-        missionCards
+        content: topicsRes.rows.map((r: any) => mapDbTopicRow(r, r.pageId))
       })
     })
     .catch((err: unknown) => {
@@ -74,24 +121,26 @@ router.get('/content', (req, res) => {
 router.get('/content/:pageId', (req, res) => {
   const { pageId } = req.params
 
-  const quotes: Record<string, string> = {
-    visions: 'I saw Jesus Christ in a vision. He spoke to me about the Eucharist and the need for devotion.',
-    life: 'She was born Hadija, but God called her to become Sister Anna Ali, a vessel of His mercy.',
-    stigmata: 'Every Thursday for 25 years, she wept tears of blood, sharing in Christ\'s passion.',
-    miracles: 'Even in death, God continues to work wonders through her intercession.',
-    book: 'Her book contains the divine messages she received about the Eucharist and proper worship.'
-  }
-
-  if (pageId === 'mission') {
-    res.json({
-      category: categories.find((c) => c.id === pageId) || null,
-      content: missionCards,
-      quote: 'Her mission continues through those who carry forward her work of mercy and devotion.'
-    })
-    return
-  }
-
   if (!dbEnabled || !pool) {
+    if (pageId === 'mission') {
+      const content = missionCards.map((m) => ({
+        id: m.id,
+        pageId: m.pageId,
+        eyebrow: m.eyebrow,
+        title: m.title,
+        tag: m.tag,
+        body: m.body,
+        blocks: [{ type: 'text', value: m.body }],
+        status: m.status,
+        ...(m.supportLink ? { supportLink: m.supportLink } : {})
+      }))
+      res.json({
+        category: categories.find((c) => c.id === pageId) || null,
+        content,
+        quote: quotes[pageId] || ''
+      })
+      return
+    }
     const content = allContent.filter((card) => card.pageId === pageId)
     const category = categories.find((c) => c.id === pageId) || null
     res.json({
@@ -102,7 +151,6 @@ router.get('/content/:pageId', (req, res) => {
     return
   }
 
-  // Story topics from DB
   Promise.all([
     pool.query(
       'SELECT id, label, sublabel, iconName FROM categories WHERE id=$1',
@@ -118,6 +166,8 @@ router.get('/content/:pageId', (req, res) => {
         t.tag,
         t.summaryText AS body,
         t.sortOrder,
+        t.mission_status,
+        t.support_link,
         cb.blocks
       FROM topics t
       JOIN topic_content_blocks cb ON cb.topicId = t.id
@@ -129,15 +179,7 @@ router.get('/content/:pageId', (req, res) => {
   ])
     .then(([categoryRes, topicsRes]: [{ rows: any[] }, { rows: any[] }]) => {
       const category = categoryRes.rows[0] || null
-      const content = topicsRes.rows.map((r: any) => ({
-        id: r.id,
-        pageId: r.categoryId,
-        eyebrow: r.eyebrow,
-        title: r.title,
-        tag: r.tag,
-        body: r.body,
-        blocks: r.blocks
-      }))
+      const content = topicsRes.rows.map((r: any) => mapDbTopicRow(r, pageId))
 
       res.json({
         category,

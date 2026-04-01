@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Eye, Cross } from 'lucide-react'
 import ContentCard from './ContentCard'
-import StoryIntroModal from './StoryIntroModal'
 import StoryReadingView from './StoryReadingView'
 import { categories } from '../data/content'
 import type { PageId, ContentCard as ContentCardType } from '../types'
@@ -199,8 +198,6 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
       exit={{ x: '-100%', opacity: 0 }}
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
     >
-      <StoryIntroModal onContinue={() => undefined} />
-
       {activeCard ? (
         <StoryReadingView
           card={activeCard}

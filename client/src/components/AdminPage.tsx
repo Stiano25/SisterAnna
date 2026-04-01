@@ -12,6 +12,8 @@ type AdminTopic = {
   sortOrder: number
   summaryText: string
   updatedAt: string
+  mission_status?: string | null
+  support_link?: string | null
 }
 
 type AdminImage = {
@@ -62,9 +64,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     iconName: 'Eye'
   })
 
-  const [topicDraft, setTopicDraft] = useState<{ eyebrow: string; title: string; tag: string; blocks: ContentBlock[] }>(
-    { eyebrow: '', title: '', tag: '', blocks: [] }
-  )
+  const [topicDraft, setTopicDraft] = useState<{
+    eyebrow: string
+    title: string
+    tag: string
+    blocks: ContentBlock[]
+    missionStatus: string
+    supportLink: string
+  }>({ eyebrow: '', title: '', tag: '', blocks: [], missionStatus: 'ongoing', supportLink: '' })
   const [images, setImages] = useState<AdminImage[]>([])
   const [galleryImages, setGalleryImages] = useState<AdminGalleryImage[]>([])
 
@@ -126,7 +133,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
       eyebrow: data.topic.eyebrow,
       title: data.topic.title,
       tag: data.topic.tag,
-      blocks: data.blocks || []
+      blocks: data.blocks || [],
+      missionStatus: data.topic.mission_status ?? 'ongoing',
+      supportLink: data.topic.support_link ?? ''
     })
 
     const cat = categories.find((c) => c.id === data.topic?.categoryId)
@@ -310,7 +319,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
           eyebrow: topicDraft.eyebrow,
           title: topicDraft.title,
           tag: topicDraft.tag,
-          blocks: topicDraft.blocks
+          blocks: topicDraft.blocks,
+          ...(selectedCategoryId === 'mission'
+            ? { missionStatus: topicDraft.missionStatus, supportLink: topicDraft.supportLink }
+            : {})
         })
       })
     } catch (e) {
@@ -837,6 +849,37 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                       />
                     </div>
                   </div>
+
+                  {selectedCategoryId === 'mission' ? (
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-bold text-memorial-ink">Mission status (public card)</label>
+                        <FieldHint>Shown next to the topic title on the Mission page.</FieldHint>
+                        <select
+                          value={topicDraft.missionStatus}
+                          onChange={(e) => setTopicDraft((p) => ({ ...p, missionStatus: e.target.value }))}
+                          className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                          disabled={loading || !selectedTopicId}
+                        >
+                          <option value="in-progress">In progress</option>
+                          <option value="unfunded">Unfunded</option>
+                          <option value="ongoing">Ongoing</option>
+                          <option value="planned">Planned</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-bold text-memorial-ink">Support line (optional)</label>
+                        <FieldHint>Short line for the support call-to-action on the card (e.g. how to help).</FieldHint>
+                        <input
+                          value={topicDraft.supportLink}
+                          onChange={(e) => setTopicDraft((p) => ({ ...p, supportLink: e.target.value }))}
+                          className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                          disabled={loading || !selectedTopicId}
+                          placeholder="e.g. Learn more about supporting the cause"
+                        />
+                      </div>
+                    </div>
+                  ) : null}
 
                   <div className="mt-4 space-y-2">
                     <label className="block text-sm font-bold text-memorial-ink">Story title</label>

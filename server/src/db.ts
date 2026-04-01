@@ -101,25 +101,27 @@ CREATE TABLE IF NOT EXISTS admin_users (
   password TEXT NOT NULL,
   createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE topics ADD COLUMN IF NOT EXISTS mission_status TEXT;
+ALTER TABLE topics ADD COLUMN IF NOT EXISTS support_link TEXT;
 `
 
+/** Categories are seeded separately; $1–$9 = topic row, $10 = blocks JSON. */
 const seedSql = `
-INSERT INTO categories (id, label, sublabel, iconName, sortOrder)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO topics (id, categoryId, eyebrow, title, tag, sortOrder, summaryText, updatedAt)
-VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+INSERT INTO topics (id, categoryId, eyebrow, title, tag, sortOrder, summaryText, mission_status, support_link, updatedAt)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
 ON CONFLICT (id) DO UPDATE
 SET eyebrow = EXCLUDED.eyebrow,
     title = EXCLUDED.title,
     tag = EXCLUDED.tag,
     sortOrder = EXCLUDED.sortOrder,
     summaryText = EXCLUDED.summaryText,
+    mission_status = EXCLUDED.mission_status,
+    support_link = EXCLUDED.support_link,
     updatedAt = NOW();
 
 INSERT INTO topic_content_blocks (topicId, blocks)
-VALUES ($1, $2::jsonb)
+VALUES ($1, $10::jsonb)
 ON CONFLICT (topicId) DO UPDATE
 SET blocks = EXCLUDED.blocks;
 `
@@ -152,13 +154,40 @@ export async function initDb() {
       await Promise.all(
         seedTopics.map(async (t, idx) => {
           const blocks = computeBlocksFromBody(t.body)
-        const summary = computeSummaryFromBody(t.body)
-        await pool!.query(seedSql, [t.id, t.pageId, t.eyebrow, t.title, t.tag, idx, summary, JSON.stringify(blocks)])
+          const summary = computeSummaryFromBody(t.body)
+          await pool!.query(seedSql, [
+            t.id,
+            t.pageId,
+            t.eyebrow,
+            t.title,
+            t.tag,
+            idx,
+            summary,
+            null,
+            null,
+            JSON.stringify(blocks)
+          ])
         })
       )
 
-      // Keep mission content in memory for now (existing mission flow is seed-only).
-      void seedMissionCards
+      await Promise.all(
+        seedMissionCards.map(async (t, idx) => {
+          const blocks = computeBlocksFromBody(t.body)
+          const summary = computeSummaryFromBody(t.body)
+          await pool!.query(seedSql, [
+            t.id,
+            t.pageId,
+            t.eyebrow,
+            t.title,
+            t.tag,
+            idx,
+            summary,
+            t.status,
+            t.supportLink ?? null,
+            JSON.stringify(blocks)
+          ])
+        })
+      )
     }
 
     // Ensure at least one admin user exists in DB.

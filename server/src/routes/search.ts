@@ -87,6 +87,8 @@ router.get('/search', (req, res) => {
         LOWER(t.summaryText) LIKE $1 OR
         LOWER(t.eyebrow) LIKE $1 OR
         LOWER(t.tag) LIKE $1 OR
+        LOWER(COALESCE(t.mission_status, '')) LIKE $1 OR
+        LOWER(COALESCE(t.support_link, '')) LIKE $1 OR
         LOWER(c.label) LIKE $1
       )
       ORDER BY t.updatedAt DESC
@@ -104,25 +106,6 @@ router.get('/search', (req, res) => {
           excerpt: row.summary.substring(0, 120) + '...'
         }))
       )
-
-      // Search mission cards from seed.ts.
-      missionCards.forEach((card) => {
-        const titleMatch = card.title.toLowerCase().includes(searchTerm)
-        const bodyMatch = card.body.toLowerCase().includes(searchTerm)
-        const eyebrowMatch = card.eyebrow.toLowerCase().includes(searchTerm)
-        const tagMatch = card.tag.toLowerCase().includes(searchTerm)
-        const statusMatch = card.status.toLowerCase().includes(searchTerm)
-
-        if (titleMatch || bodyMatch || eyebrowMatch || tagMatch || statusMatch) {
-          results.push({
-            id: card.id,
-            title: card.title,
-            category: 'Mission',
-            pageId: 'mission',
-            excerpt: card.body.substring(0, 120) + '...'
-          })
-        }
-      })
 
       // Remove duplicates and limit results.
       const uniqueResults = results

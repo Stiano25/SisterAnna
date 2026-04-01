@@ -152,7 +152,7 @@ router.get('/categories/:categoryId/topics', async (req, res) => {
   try {
     const r = await db.query(
       `
-      SELECT id, categoryId, eyebrow, title, tag, sortOrder, summaryText, updatedAt
+      SELECT id, categoryId, eyebrow, title, tag, sortOrder, summaryText, mission_status, support_link, updatedAt
       FROM topics
       WHERE categoryId=$1
       ORDER BY sortOrder, updatedAt DESC
@@ -172,6 +172,7 @@ router.post('/categories/:categoryId/topics', async (req, res) => {
 
   // Generate a stable-ish id for future blocks reference.
   const id = `topic_${randomUUID()}`
+  const isMission = categoryId === 'mission'
 
   try {
     const orderRes = await db.query<{ m: string }>(
@@ -182,11 +183,20 @@ router.post('/categories/:categoryId/topics', async (req, res) => {
 
     await db.query(
       `
-      INSERT INTO topics (id, categoryId, eyebrow, title, tag, sortOrder, summaryText, updatedAt)
-      VALUES ($1, $2, COALESCE($3,''), $4, COALESCE($5,''), $6, '', NOW())
+      INSERT INTO topics (id, categoryId, eyebrow, title, tag, sortOrder, summaryText, mission_status, support_link, updatedAt)
+      VALUES ($1, $2, COALESCE($3,''), $4, COALESCE($5,''), $6, '', $7, $8, NOW())
       ON CONFLICT (id) DO NOTHING
       `,
-      [id, categoryId, eyebrow ?? '', title, tag ?? '', sortOrder]
+      [
+        id,
+        categoryId,
+        eyebrow ?? '',
+        title,
+        tag ?? '',
+        sortOrder,
+        isMission ? 'ongoing' : null,
+        isMission ? '' : null
+      ]
     )
 
     // Initialize empty blocks row.
@@ -242,7 +252,7 @@ router.get('/topics/:topicId', async (req, res) => {
   try {
     const topicRes = await db.query(
       `
-      SELECT id, categoryId, eyebrow, title, tag, sortOrder, summaryText, updatedAt
+      SELECT id, categoryId, eyebrow, title, tag, sortOrder, summaryText, mission_status, support_link, updatedAt
       FROM topics
       WHERE id=$1
       `,
@@ -281,24 +291,44 @@ router.get('/topics/:topicId', async (req, res) => {
 
 router.put('/topics/:topicId', async (req, res) => {
   const { topicId } = req.params
-  const { eyebrow, title, tag, blocks } = req.body as {
+  const { eyebrow, title, tag, blocks, missionStatus, supportLink } = req.body as {
     eyebrow?: string
     title: string
     tag?: string
     blocks: unknown
+    missionStatus?: string | null
+    supportLink?: string | null
   }
 
   const normalizedBlocks = normalizeBlocks(blocks)
   const summaryText = computeSummaryText(normalizedBlocks)
 
   try {
+    const catRes = await db.query<{ categoryId: string }>(`SELECT categoryId FROM topics WHERE id=$1`, [topicId])
+    const categoryId = catRes.rows[0]?.categoryId
+    const isMission = categoryId === 'mission'
+
     await db.query(
       `
       UPDATE topics
-      SET eyebrow=COALESCE($1,''), title=$2, tag=COALESCE($3,''), summaryText=$4, updatedAt=NOW()
-      WHERE id=$5
+      SET eyebrow=COALESCE($1,''),
+          title=$2,
+          tag=COALESCE($3,''),
+          summaryText=$4,
+          mission_status=$5,
+          support_link=$6,
+          updatedAt=NOW()
+      WHERE id=$7
       `,
-      [eyebrow ?? '', title, tag ?? '', summaryText, topicId]
+      [
+        eyebrow ?? '',
+        title,
+        tag ?? '',
+        summaryText,
+        isMission ? missionStatus ?? 'ongoing' : null,
+        isMission ? supportLink ?? '' : null,
+        topicId
+      ]
     )
 
     await db.query(
