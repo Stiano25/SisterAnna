@@ -31,6 +31,15 @@ type AdminGalleryImage = {
   filename: string
   sortOrder: number
   createdAt: string
+  categoryId: string
+  categoryName: string
+}
+
+type AdminGalleryCategory = {
+  id: string
+  name: string
+  sortOrder: number
+  createdAt: string
 }
 
 type AdminStep = 'category' | 'topics' | 'gallery'
@@ -74,6 +83,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
   }>({ eyebrow: '', title: '', tag: '', blocks: [], missionStatus: 'ongoing', supportLink: '' })
   const [images, setImages] = useState<AdminImage[]>([])
   const [galleryImages, setGalleryImages] = useState<AdminGalleryImage[]>([])
+  const [galleryCategories, setGalleryCategories] = useState<AdminGalleryCategory[]>([])
+  const [selectedGalleryCategoryId, setSelectedGalleryCategoryId] = useState<string>('')
+  const [newGalleryCategoryName, setNewGalleryCategoryName] = useState('')
+  const [editingGalleryCategoryName, setEditingGalleryCategoryName] = useState('')
+  const [selectedGalleryImageId, setSelectedGalleryImageId] = useState<string>('')
+  const [checkedGalleryImageIds, setCheckedGalleryImageIds] = useState<string[]>([])
 
   const [selectedImageId, setSelectedImageId] = useState<string>('')
   const [loading, setLoading] = useState(false)
@@ -149,6 +164,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
       try {
         setLoading(true)
         await fetchCategories()
+        await fetchGalleryCategories()
         await fetchGalleryImages()
       } catch (e) {
         setError((e as Error).message)
@@ -381,18 +397,196 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
       const res = await apiFetch('/admin/gallery/images', { method: 'GET' })
       const data = (await res.json()) as AdminGalleryImage[]
       setGalleryImages(data)
+      setSelectedGalleryImageId((prev) => (prev && data.some((img) => img.id === prev) ? prev : data[0]?.id || ''))
+      setCheckedGalleryImageIds((prev) => prev.filter((id) => data.some((img) => img.id === id)))
     } catch (e) {
       setError((e as Error).message)
     }
   }
 
+  const fetchGalleryCategories = async () => {
+    if (!authHeader) return
+    setError(null)
+    try {
+      const res = await apiFetch('/admin/gallery/categories', { method: 'GET' })
+      const data = (await res.json()) as AdminGalleryCategory[]
+      setGalleryCategories(data)
+      setSelectedGalleryCategoryId((prev) => {
+        const next = prev && data.some((c) => c.id === prev) ? prev : data[0]?.id || ''
+        const selected = data.find((c) => c.id === next)
+        setEditingGalleryCategoryName(selected?.name ?? '')
+        return next
+      })
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const createGalleryCategory = async () => {
+    const name = newGalleryCategoryName.trim()
+    if (!name) {
+      setError('Enter a gallery category name first.')
+      return
+    }
+    setError(null)
+    setLoading(true)
+    try {
+      const res = await apiFetch('/admin/gallery/categories', {
+        method: 'POST',
+        body: JSON.stringify({ name })
+      })
+      const data = (await res.json()) as { id: string }
+      setNewGalleryCategoryName('')
+      await fetchGalleryCategories()
+      setSelectedGalleryCategoryId(data.id)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const renameGalleryCategory = async () => {
+    if (!selectedGalleryCategoryId) return
+    const name = editingGalleryCategoryName.trim()
+    if (!name) {
+      setError('Category name cannot be empty.')
+      return
+    }
+    setError(null)
+    setLoading(true)
+    try {
+      await apiFetch(`/admin/gallery/categories/${selectedGalleryCategoryId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name })
+      })
+      await fetchGalleryCategories()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const reorderGalleryCategory = async (dir: -1 | 1) => {
+    const idx = galleryCategories.findIndex((c) => c.id === selectedGalleryCategoryId)
+    if (idx < 0) return
+    const to = idx + dir
+    if (to < 0 || to >= galleryCategories.length) return
+    const next = [...galleryCategories]
+    ;[next[idx], next[to]] = [next[to], next[idx]]
+    setGalleryCategories(next)
+    setError(null)
+    setLoading(true)
+    try {
+      await apiFetch('/admin/gallery/categories/order', {
+        method: 'PUT',
+        body: JSON.stringify({ categoryIds: next.map((c) => c.id) })
+      })
+      await fetchGalleryCategories()
+    } catch (e) {
+      setError((e as Error).message)
+      await fetchGalleryCategories()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deleteGalleryCategory = async () => {
+    if (!selectedGalleryCategoryId) return
+    if (selectedGalleryCategoryId === 'general') {
+      setError('General category cannot be deleted.')
+      return
+    }
+    setError(null)
+    setLoading(true)
+    try {
+      await apiFetch(`/admin/gallery/categories/${selectedGalleryCategoryId}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ fallbackCategoryId: 'general' })
+      })
+      await fetchGalleryCategories()
+      await fetchGalleryImages()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateGalleryImageCategory = async (categoryId: string) => {
+    if (!selectedGalleryImageId) {
+      setError('Select an image first.')
+      return
+    }
+    if (!categoryId) {
+      setError('Select a destination category.')
+      return
+    }
+    setError(null)
+    setLoading(true)
+    try {
+      await apiFetch(`/admin/gallery/images/${selectedGalleryImageId}/category`, {
+        method: 'PUT',
+        body: JSON.stringify({ categoryId })
+      })
+      await fetchGalleryImages()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deleteSelectedGalleryImage = async () => {
+    if (!selectedGalleryImageId) {
+      setError('Select an image first.')
+      return
+    }
+    setError(null)
+    setLoading(true)
+    try {
+      await apiFetch(`/admin/gallery/images/${selectedGalleryImageId}`, { method: 'DELETE' })
+      await fetchGalleryImages()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deleteCheckedGalleryImages = async () => {
+    if (checkedGalleryImageIds.length === 0) {
+      setError('Tick at least one image to delete.')
+      return
+    }
+    setError(null)
+    setLoading(true)
+    try {
+      await Promise.all(
+        checkedGalleryImageIds.map((id) => apiFetch(`/admin/gallery/images/${id}`, { method: 'DELETE' }))
+      )
+      setCheckedGalleryImageIds([])
+      await fetchGalleryImages()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const uploadGalleryImages = async (files: FileList | null) => {
     if (!files || files.length === 0) return
+    if (!selectedGalleryCategoryId) {
+      setError('Create or select a gallery category first.')
+      return
+    }
     setError(null)
     setLoading(true)
     try {
       const form = new FormData()
       Array.from(files).forEach((f) => form.append('images', f))
+      form.append('categoryId', selectedGalleryCategoryId)
 
       const res = await fetch('/api/admin/gallery/images', {
         method: 'POST',
@@ -403,6 +597,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
         const body = await res.json().catch(() => ({}))
         throw new Error(body?.error || `Upload failed: ${res.status}`)
       }
+      await fetchGalleryCategories()
       await fetchGalleryImages()
     } catch (e) {
       setError((e as Error).message)
@@ -1089,31 +1284,224 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                       Gallery images
                     </div>
                     <p className="text-sm text-memorial-muted mt-1">
-                      Upload images here to display them on the public Gallery page.
+                      Create gallery categories first, then upload images into the selected category.
                     </p>
                   </div>
-                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-full border border-memorial-line hover:border-memorial-accent/60 transition-colors text-sm font-bold text-memorial-muted">
-                    <Upload className="w-4 h-4 text-memorial-accent" strokeWidth={1.5} />
-                    Upload to gallery
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                  <div className="lg:col-span-2">
+                    <label className="block text-sm font-bold text-memorial-muted mb-2">Gallery category</label>
+                    <select
+                      value={selectedGalleryCategoryId}
+                      onChange={(e) => {
+                        const nextId = e.target.value
+                        setSelectedGalleryCategoryId(nextId)
+                        const selected = galleryCategories.find((c) => c.id === nextId)
+                        setEditingGalleryCategoryName(selected?.name ?? '')
+                      }}
+                      className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                      disabled={loading || galleryCategories.length === 0}
+                    >
+                      {galleryCategories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-full border border-memorial-line hover:border-memorial-accent/60 transition-colors text-sm font-bold text-memorial-muted">
+                      <Upload className="w-4 h-4 text-memorial-accent" strokeWidth={1.5} />
+                      Upload to selected category
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => void uploadGalleryImages(e.target.files)}
+                        disabled={loading || !selectedGalleryCategoryId}
+                      />
+                    </label>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                  <div className="lg:col-span-2">
+                    <label className="block text-sm font-bold text-memorial-muted mb-2">New gallery category name</label>
                     <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={(e) => void uploadGalleryImages(e.target.files)}
-                      disabled={loading}
+                      value={newGalleryCategoryName}
+                      onChange={(e) => setNewGalleryCategoryName(e.target.value)}
+                      className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                      placeholder="e.g. Pilgrims, Events, Eucharistic Devotion"
                     />
-                  </label>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => void createGalleryCategory()}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-full border-2 border-memorial-accent text-memorial-accent font-bold hover:bg-memorial-accent/10 transition-colors disabled:opacity-50"
+                      disabled={loading}
+                    >
+                      <Plus className="w-5 h-5" strokeWidth={1.5} />
+                      Create gallery category
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                  <div className="lg:col-span-2">
+                    <label className="block text-sm font-bold text-memorial-muted mb-2">Rename selected category</label>
+                    <input
+                      value={editingGalleryCategoryName}
+                      onChange={(e) => setEditingGalleryCategoryName(e.target.value)}
+                      className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                      placeholder="Category name"
+                      disabled={loading || !selectedGalleryCategoryId}
+                    />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void renameGalleryCategory()}
+                      className="flex-1 px-4 py-3 rounded-full bg-memorial-ink text-memorial-card font-bold shadow-lg hover:opacity-95 transition-opacity disabled:opacity-50"
+                      disabled={loading || !selectedGalleryCategoryId}
+                    >
+                      Rename
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void deleteGalleryCategory()}
+                      className="px-4 py-3 rounded-full border border-red-300 text-red-600 font-bold hover:bg-red-50 transition-colors disabled:opacity-50"
+                      disabled={loading || !selectedGalleryCategoryId || selectedGalleryCategoryId === 'general'}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                <div className="mb-3 overflow-x-auto">
+                  <div className="inline-flex gap-2 min-w-full pb-1">
+                    {galleryCategories.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedGalleryCategoryId(c.id)
+                          setEditingGalleryCategoryName(c.name)
+                        }}
+                        className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border transition-colors ${
+                          selectedGalleryCategoryId === c.id
+                            ? 'bg-memorial-accent text-memorial-card border-memorial-accent'
+                            : 'bg-memorial-card text-memorial-muted border-memorial-line hover:border-memorial-accent/60'
+                        }`}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-memorial-muted mb-3">
+                  Uploaded images ({galleryImages.length}) are shown below across all categories so you can always verify what is already in the system.
+                </p>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                  <div className="lg:col-span-2">
+                    <label className="block text-sm font-bold text-memorial-muted mb-2">Move selected image to category</label>
+                    <select
+                      value={selectedGalleryCategoryId}
+                      onChange={(e) => setSelectedGalleryCategoryId(e.target.value)}
+                      className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                      disabled={loading || galleryCategories.length === 0}
+                    >
+                      {galleryCategories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => void updateGalleryImageCategory(selectedGalleryCategoryId)}
+                      className="w-full px-4 py-3 rounded-full bg-memorial-ink text-memorial-card font-bold shadow-lg hover:opacity-95 transition-opacity disabled:opacity-50"
+                      disabled={loading || !selectedGalleryImageId || !selectedGalleryCategoryId}
+                    >
+                      Change selected image category
+                    </button>
+                  </div>
+                </div>
+                <div className="mb-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void deleteSelectedGalleryImage()}
+                    className="px-4 py-2 rounded-full border border-red-300 text-red-600 font-bold hover:bg-red-50 transition-colors disabled:opacity-50"
+                    disabled={loading || !selectedGalleryImageId}
+                  >
+                    Delete selected image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void deleteCheckedGalleryImages()}
+                    className="px-4 py-2 rounded-full border border-red-300 text-red-600 font-bold hover:bg-red-50 transition-colors disabled:opacity-50"
+                    disabled={loading || checkedGalleryImageIds.length === 0}
+                  >
+                    Delete checked images ({checkedGalleryImageIds.length})
+                  </button>
+                </div>
+                <div className="mb-4 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void reorderGalleryCategory(-1)}
+                    className="px-3 py-2 rounded border border-memorial-line hover:border-memorial-accent/60 text-sm"
+                    disabled={loading || galleryCategories.findIndex((c) => c.id === selectedGalleryCategoryId) <= 0}
+                  >
+                    Move selected up
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void reorderGalleryCategory(1)}
+                    className="px-3 py-2 rounded border border-memorial-line hover:border-memorial-accent/60 text-sm"
+                    disabled={
+                      loading ||
+                      galleryCategories.findIndex((c) => c.id === selectedGalleryCategoryId) === -1 ||
+                      galleryCategories.findIndex((c) => c.id === selectedGalleryCategoryId) === galleryCategories.length - 1
+                    }
+                  >
+                    Move selected down
+                  </button>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3 max-h-[65vh] overflow-y-auto pr-1">
                   {galleryImages.map((img) => (
-                    <div key={img.id} className="rounded-xl overflow-hidden border border-memorial-line bg-memorial-card/80">
+                    <button
+                      key={img.id}
+                      type="button"
+                      onClick={() => setSelectedGalleryImageId(img.id)}
+                      className={`text-left rounded-xl overflow-hidden border bg-memorial-card/80 ${
+                        img.id === selectedGalleryImageId ? 'border-memorial-accent' : 'border-memorial-line'
+                      }`}
+                    >
+                      <div className="px-2 pt-2">
+                        <input
+                          type="checkbox"
+                          checked={checkedGalleryImageIds.includes(img.id)}
+                          onChange={(e) => {
+                            const checked = e.target.checked
+                            setCheckedGalleryImageIds((prev) =>
+                              checked ? [...prev, img.id] : prev.filter((id) => id !== img.id)
+                            )
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="accent-memorial-accent"
+                          aria-label={`Select ${img.alt || img.filename} for deletion`}
+                        />
+                      </div>
                       <img
                         src={`/api/images/gallery/${img.id}`}
                         alt={img.alt || img.filename}
                         className="w-full h-28 object-cover"
+                        title={img.categoryName}
                       />
-                    </div>
+                      <div className="px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-memorial-muted border-t border-memorial-line/60 truncate">
+                        {img.categoryName || 'Uncategorized'}
+                      </div>
+                    </button>
                   ))}
                   {galleryImages.length === 0 ? (
                     <div className="col-span-2 text-sm text-memorial-muted">No gallery images uploaded yet.</div>

@@ -54,6 +54,14 @@ function isUnreachableDbError(err: unknown): boolean {
   return false
 }
 
+function slugifyGalleryCategory(input: string) {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 router.post('/login', adminLogin)
 router.use(requireAdmin)
 router.use((req, res, next) => {
@@ -400,13 +408,169 @@ router.post('/topics/:topicId/images', upload.array('images', 10), async (req, r
 })
 
 // Gallery images (site-wide, not tied to a topic)
+router.get('/gallery/categories', async (req, res) => {
+  try {
+    const r = await db.query(
+      `
+      SELECT id, name, sortOrder AS "sortOrder", createdAt AS "createdAt"
+      FROM gallery_categories
+      ORDER BY sortOrder, createdAt DESC
+      `
+    )
+    res.json(r.rows)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to load gallery categories' })
+  }
+})
+
+router.post('/gallery/categories', async (req, res) => {
+  const { name } = req.body as { name?: string }
+  const cleanName = (name || '').trim()
+  const id = slugifyGalleryCategory(cleanName)
+  if (!cleanName || !id) {
+    res.status(400).json({ error: 'Category name is required' })
+    return
+  }
+
+  try {
+    const orderRes = await db.query<{ m: string }>(
+      `SELECT COALESCE(MAX(sortOrder), -1)::text AS m FROM gallery_categories`
+    )
+    const sortOrder = Number(orderRes.rows[0]?.m ?? -1) + 1
+
+    await db.query(
+      `
+      INSERT INTO gallery_categories (id, name, sortOrder, createdAt)
+      VALUES ($1, $2, $3, NOW())
+      `,
+      [id, cleanName, sortOrder]
+    )
+    res.json({ ok: true, id })
+  } catch (err: any) {
+    if (err?.code === '23505') {
+      res.status(409).json({ error: 'That gallery category already exists' })
+      return
+    }
+    console.error(err)
+    res.status(500).json({ error: 'Failed to create gallery category' })
+  }
+})
+
+router.put('/gallery/categories/:categoryId', async (req, res) => {
+  const { categoryId } = req.params
+  const { name } = req.body as { name?: string }
+  const cleanName = (name || '').trim()
+  if (!cleanName) {
+    res.status(400).json({ error: 'Category name is required' })
+    return
+  }
+
+  try {
+    await db.query(
+      `
+      UPDATE gallery_categories
+      SET name=$1
+      WHERE id=$2
+      `,
+      [cleanName, categoryId]
+    )
+    res.json({ ok: true })
+  } catch (err: any) {
+    if (err?.code === '23505') {
+      res.status(409).json({ error: 'That gallery category name already exists' })
+      return
+    }
+    console.error(err)
+    res.status(500).json({ error: 'Failed to rename gallery category' })
+  }
+})
+
+router.put('/gallery/categories/order', async (req, res) => {
+  const { categoryIds } = req.body as { categoryIds?: string[] }
+  if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
+    res.status(400).json({ error: 'categoryIds is required' })
+    return
+  }
+
+  try {
+    await db.query('BEGIN')
+    for (let i = 0; i < categoryIds.length; i++) {
+      await db.query(
+        `
+        UPDATE gallery_categories
+        SET sortOrder=$1
+        WHERE id=$2
+        `,
+        [i, categoryIds[i]]
+      )
+    }
+    await db.query('COMMIT')
+    res.json({ ok: true })
+  } catch (err) {
+    await db.query('ROLLBACK')
+    console.error(err)
+    res.status(500).json({ error: 'Failed to reorder gallery categories' })
+  }
+})
+
+router.delete('/gallery/categories/:categoryId', async (req, res) => {
+  const { categoryId } = req.params
+  const fallbackCategoryId =
+    typeof req.body?.fallbackCategoryId === 'string' && req.body.fallbackCategoryId.trim()
+      ? req.body.fallbackCategoryId.trim()
+      : 'general'
+
+  if (categoryId === 'general') {
+    res.status(400).json({ error: 'The General category cannot be deleted' })
+    return
+  }
+  if (fallbackCategoryId === categoryId) {
+    res.status(400).json({ error: 'Fallback category must be different' })
+    return
+  }
+
+  try {
+    const fallback = await db.query('SELECT id FROM gallery_categories WHERE id=$1', [fallbackCategoryId])
+    if (fallback.rowCount === 0) {
+      res.status(400).json({ error: 'Fallback gallery category not found' })
+      return
+    }
+
+    await db.query('BEGIN')
+    await db.query(
+      `
+      UPDATE gallery_images
+      SET categoryId=$1
+      WHERE categoryId=$2
+      `,
+      [fallbackCategoryId, categoryId]
+    )
+    await db.query('DELETE FROM gallery_categories WHERE id=$1', [categoryId])
+    await db.query('COMMIT')
+    res.json({ ok: true })
+  } catch (err) {
+    await db.query('ROLLBACK')
+    console.error(err)
+    res.status(500).json({ error: 'Failed to delete gallery category' })
+  }
+})
+
 router.get('/gallery/images', async (req, res) => {
   try {
     const r = await db.query(
       `
-      SELECT id, alt, filename, sortOrder, createdAt
-      FROM gallery_images
-      ORDER BY sortOrder, createdAt DESC
+      SELECT
+        gi.id,
+        gi.alt,
+        gi.filename,
+        gi.sortOrder AS "sortOrder",
+        gi.createdAt AS "createdAt",
+        COALESCE(gi.categoryId, 'uncategorized') AS "categoryId",
+        COALESCE(gc.name, 'Uncategorized') AS "categoryName"
+      FROM gallery_images gi
+      LEFT JOIN gallery_categories gc ON gc.id = gi.categoryId
+      ORDER BY gc.sortOrder, gi.sortOrder, gi.createdAt DESC
       `
     )
     res.json(r.rows)
@@ -423,6 +587,16 @@ router.post('/gallery/images', upload.array('images', 20), async (req, res) => {
       res.status(400).json({ error: 'No images uploaded' })
       return
     }
+    const categoryId = typeof req.body?.categoryId === 'string' ? req.body.categoryId.trim() : ''
+    if (!categoryId) {
+      res.status(400).json({ error: 'gallery category is required' })
+      return
+    }
+    const categoryCheck = await db.query('SELECT id FROM gallery_categories WHERE id=$1', [categoryId])
+    if (categoryCheck.rowCount === 0) {
+      res.status(400).json({ error: 'Invalid gallery category' })
+      return
+    }
 
     const alts = typeof req.body?.alts === 'string' ? JSON.parse(req.body.alts) : req.body?.alts
 
@@ -433,10 +607,10 @@ router.post('/gallery/images', upload.array('images', 20), async (req, res) => {
 
       await db.query(
         `
-        INSERT INTO gallery_images (id, alt, mimeType, filename, data, sortOrder, createdAt)
-        VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        INSERT INTO gallery_images (id, categoryId, alt, mimeType, filename, data, sortOrder, createdAt)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
         `,
-        [id, alt, f.mimetype, f.originalname, f.buffer, i]
+        [id, categoryId, alt, f.mimetype, f.originalname, f.buffer, i]
       )
     }
 
@@ -444,6 +618,51 @@ router.post('/gallery/images', upload.array('images', 20), async (req, res) => {
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Failed to upload gallery images' })
+  }
+})
+
+router.put('/gallery/images/:imageId/category', async (req, res) => {
+  const { imageId } = req.params
+  const categoryId = typeof req.body?.categoryId === 'string' ? req.body.categoryId.trim() : ''
+  if (!categoryId) {
+    res.status(400).json({ error: 'categoryId is required' })
+    return
+  }
+
+  try {
+    const categoryCheck = await db.query('SELECT id FROM gallery_categories WHERE id=$1', [categoryId])
+    if (categoryCheck.rowCount === 0) {
+      res.status(400).json({ error: 'Invalid gallery category' })
+      return
+    }
+
+    await db.query(
+      `
+      UPDATE gallery_images
+      SET categoryId=$1
+      WHERE id=$2
+      `,
+      [categoryId, imageId]
+    )
+    res.json({ ok: true })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to update gallery image category' })
+  }
+})
+
+router.delete('/gallery/images/:imageId', async (req, res) => {
+  const { imageId } = req.params
+  try {
+    const r = await db.query('DELETE FROM gallery_images WHERE id=$1', [imageId])
+    if (r.rowCount === 0) {
+      res.status(404).json({ error: 'Gallery image not found' })
+      return
+    }
+    res.json({ ok: true })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to delete gallery image' })
   }
 })
 

@@ -3,6 +3,27 @@ import { dbEnabled, pool } from '../db.js'
 
 const router = express.Router()
 
+router.get('/gallery/categories', async (req, res) => {
+  if (!dbEnabled || !pool) {
+    res.status(503).json({ error: 'Gallery not available (Neon DB not configured)' })
+    return
+  }
+
+  try {
+    const r = await pool.query(
+      `
+      SELECT id, name, sortOrder AS "sortOrder", createdAt AS "createdAt"
+      FROM gallery_categories
+      ORDER BY sortOrder, createdAt DESC
+      `
+    )
+    res.json(r.rows)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to load gallery categories' })
+  }
+})
+
 router.get('/gallery/images', async (req, res) => {
   if (!dbEnabled || !pool) {
     res.status(503).json({ error: 'Gallery not available (Neon DB not configured)' })
@@ -12,9 +33,17 @@ router.get('/gallery/images', async (req, res) => {
   try {
     const r = await pool.query(
       `
-      SELECT id, alt, filename, sortOrder, createdAt
-      FROM gallery_images
-      ORDER BY sortOrder, createdAt DESC
+      SELECT
+        gi.id,
+        gi.alt,
+        gi.filename,
+        gi.sortOrder AS "sortOrder",
+        gi.createdAt AS "createdAt",
+        COALESCE(gi.categoryId, 'uncategorized') AS "categoryId",
+        COALESCE(gc.name, 'Uncategorized') AS "categoryName"
+      FROM gallery_images gi
+      LEFT JOIN gallery_categories gc ON gc.id = gi.categoryId
+      ORDER BY gc.sortOrder, gi.sortOrder, gi.createdAt DESC
       `
     )
     res.json(r.rows)

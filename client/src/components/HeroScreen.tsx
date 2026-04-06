@@ -70,6 +70,9 @@ const HeroScreen: React.FC<HeroScreenProps> = ({ onExplore }) => {
           <p className="text-xs text-memorial-muted tracking-[0.15em] uppercase font-bold">
             29 Dec 1966 – 6 Jun 2012
           </p>
+          <p className="mt-2 text-lg md:text-xl text-memorial-ink font-bold">
+            Biography of Sister Anna Ali as narrated by the family
+          </p>
         </motion.div>
 
         <motion.div className="flex justify-center mb-4 shrink-0" variants={itemVariants}>

@@ -88,10 +88,18 @@ CREATE TABLE IF NOT EXISTS images (
 
 CREATE TABLE IF NOT EXISTS gallery_images (
   id TEXT PRIMARY KEY,
+  categoryId TEXT,
   alt TEXT NOT NULL DEFAULT '',
   mimeType TEXT NOT NULL,
   filename TEXT NOT NULL,
   data BYTEA NOT NULL,
+  sortOrder INT NOT NULL DEFAULT 0,
+  createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS gallery_categories (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
   sortOrder INT NOT NULL DEFAULT 0,
   createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -104,6 +112,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
 
 ALTER TABLE topics ADD COLUMN IF NOT EXISTS mission_status TEXT;
 ALTER TABLE topics ADD COLUMN IF NOT EXISTS support_link TEXT;
+ALTER TABLE gallery_images ADD COLUMN IF NOT EXISTS categoryId TEXT;
 `
 
 /** Categories are seeded separately; $1–$9 = topic row, $10 = blocks JSON. */
@@ -189,6 +198,39 @@ export async function initDb() {
         })
       )
     }
+
+    // Ensure gallery categories exist and existing images are assigned.
+    await pool.query(
+      `
+      INSERT INTO gallery_categories (id, name, sortOrder)
+      VALUES ('general', 'General', 0)
+      ON CONFLICT (id) DO NOTHING
+      `
+    )
+    await pool.query(
+      `
+      UPDATE gallery_images
+      SET categoryId = 'general'
+      WHERE categoryId IS NULL OR categoryId = ''
+      `
+    )
+    await pool.query(
+      `
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1
+          FROM information_schema.table_constraints
+          WHERE table_name='gallery_images'
+            AND constraint_name='gallery_images_category_fk'
+        ) THEN
+          ALTER TABLE gallery_images
+          ADD CONSTRAINT gallery_images_category_fk
+          FOREIGN KEY (categoryId) REFERENCES gallery_categories(id) ON DELETE RESTRICT;
+        END IF;
+      END $$;
+      `
+    )
 
     // Ensure at least one admin user exists in DB.
     const adminCount = await pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM admin_users')
