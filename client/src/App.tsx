@@ -4,6 +4,7 @@ import { useNavigation } from './hooks/useNavigation'
 import HeroScreen from './components/HeroScreen'
 import ExplorerOverlay from './components/ExplorerOverlay'
 import AdminPage from './components/AdminPage'
+import PageLoader from './components/PageLoader'
 
 const SubPage = lazy(() => import('./components/SubPage'))
 const MissionPage = lazy(() => import('./components/MissionPage'))
@@ -18,13 +19,13 @@ function App() {
         return <HeroScreen onExplore={() => goTo('search')} />
       case 'mission':
         return (
-          <Suspense fallback={<div className="min-h-screen bg-memorial spiritual-page" />}>
+          <Suspense fallback={<PageLoader label="Opening mission..." />}>
             <MissionPage onBack={goBack} />
           </Suspense>
         )
       case 'gallery':
         return (
-          <Suspense fallback={<div className="min-h-screen bg-memorial spiritual-page" />}>
+          <Suspense fallback={<PageLoader label="Opening gallery..." />}>
             <GalleryPage onBack={goBack} />
           </Suspense>
         )
@@ -34,7 +35,7 @@ function App() {
         return <AdminPage onBack={goBack} />
       default:
         return (
-          <Suspense fallback={<div className="min-h-screen bg-memorial spiritual-page" />}>
+          <Suspense fallback={<PageLoader label="Opening section..." />}>
             <SubPage pageId={currentPage} onBack={goBack} />
           </Suspense>
         )
@@ -43,7 +44,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-memorial spiritual-root">
-      <div className="mx-auto w-full max-w-none px-4 sm:px-0">
+      <div className="mx-auto w-full max-w-none px-0">
         <AnimatePresence mode="wait" custom={direction}>
           {renderPage()}
         </AnimatePresence>

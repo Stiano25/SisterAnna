@@ -88,6 +88,33 @@ router.get('/images/:imageId', async (req, res) => {
   }
 })
 
+router.get('/images/:imageId/meta', async (req, res) => {
+  const { imageId } = req.params
+  if (!dbEnabled || !pool) {
+    res.status(503).json({ error: 'Images not available (Neon DB not configured)' })
+    return
+  }
+  try {
+    const r = await pool.query(
+      `
+      SELECT id, alt
+      FROM images
+      WHERE id=$1
+      `,
+      [imageId]
+    )
+    const row = r.rows[0]
+    if (!row) {
+      res.status(404).json({ error: 'Image not found' })
+      return
+    }
+    res.json({ id: row.id, alt: row.alt || '' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to load image metadata' })
+  }
+})
+
 router.get('/images/gallery/:imageId', async (req, res) => {
   const { imageId } = req.params
 
@@ -118,6 +145,33 @@ router.get('/images/gallery/:imageId', async (req, res) => {
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Failed to load image' })
+  }
+})
+
+router.get('/images/gallery/:imageId/meta', async (req, res) => {
+  const { imageId } = req.params
+  if (!dbEnabled || !pool) {
+    res.status(503).json({ error: 'Images not available (Neon DB not configured)' })
+    return
+  }
+  try {
+    const r = await pool.query(
+      `
+      SELECT id, alt
+      FROM gallery_images
+      WHERE id=$1
+      `,
+      [imageId]
+    )
+    const row = r.rows[0]
+    if (!row) {
+      res.status(404).json({ error: 'Image not found' })
+      return
+    }
+    res.json({ id: row.id, alt: row.alt || '' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to load gallery image metadata' })
   }
 })
 

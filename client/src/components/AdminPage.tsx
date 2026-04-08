@@ -14,6 +14,10 @@ type AdminTopic = {
   updatedAt: string
   mission_status?: string | null
   support_link?: string | null
+  video_url?: string | null
+  event_date?: string | null
+  recording_url?: string | null
+  thumbnail_image_id?: string | null
 }
 
 type AdminImage = {
@@ -80,7 +84,22 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     blocks: ContentBlock[]
     missionStatus: string
     supportLink: string
-  }>({ eyebrow: '', title: '', tag: '', blocks: [], missionStatus: 'ongoing', supportLink: '' })
+    videoUrl: string
+    eventDate: string
+    recordingUrl: string
+    thumbnailImageId: string
+  }>({
+    eyebrow: '',
+    title: '',
+    tag: '',
+    blocks: [],
+    missionStatus: 'ongoing',
+    supportLink: '',
+    videoUrl: '',
+    eventDate: '',
+    recordingUrl: '',
+    thumbnailImageId: ''
+  })
   const [images, setImages] = useState<AdminImage[]>([])
   const [galleryImages, setGalleryImages] = useState<AdminGalleryImage[]>([])
   const [galleryCategories, setGalleryCategories] = useState<AdminGalleryCategory[]>([])
@@ -91,6 +110,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
   const [checkedGalleryImageIds, setCheckedGalleryImageIds] = useState<string[]>([])
 
   const [selectedImageId, setSelectedImageId] = useState<string>('')
+  const [selectedImageAltDraft, setSelectedImageAltDraft] = useState('')
+  const [selectedGalleryImageAltDraft, setSelectedGalleryImageAltDraft] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -144,13 +165,18 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     setSelectedTopicId(topicId)
     setImages(data.images)
     setSelectedImageId(data.images[0]?.id || '')
+    setSelectedImageAltDraft(data.images[0]?.alt || '')
     setTopicDraft({
       eyebrow: data.topic.eyebrow,
       title: data.topic.title,
       tag: data.topic.tag,
       blocks: data.blocks || [],
       missionStatus: data.topic.mission_status ?? 'ongoing',
-      supportLink: data.topic.support_link ?? ''
+      supportLink: data.topic.support_link ?? '',
+      videoUrl: data.topic.video_url ?? '',
+      eventDate: data.topic.event_date ? String(data.topic.event_date).slice(0, 10) : '',
+      recordingUrl: data.topic.recording_url ?? '',
+      thumbnailImageId: data.topic.thumbnail_image_id ?? ''
     })
 
     const cat = categories.find((c) => c.id === data.topic?.categoryId)
@@ -215,6 +241,16 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTopicId, adminStep])
+
+  useEffect(() => {
+    const selected = images.find((img) => img.id === selectedImageId)
+    setSelectedImageAltDraft(selected?.alt || '')
+  }, [selectedImageId, images])
+
+  useEffect(() => {
+    const selected = galleryImages.find((img) => img.id === selectedGalleryImageId)
+    setSelectedGalleryImageAltDraft(selected?.alt || '')
+  }, [selectedGalleryImageId, galleryImages])
 
   const handleLogin = async () => {
     setError(null)
@@ -338,6 +374,19 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
           blocks: topicDraft.blocks,
           ...(selectedCategoryId === 'mission'
             ? { missionStatus: topicDraft.missionStatus, supportLink: topicDraft.supportLink }
+            : {}),
+          ...(selectedCategoryId === 'videos'
+            ? {
+                videoUrl: topicDraft.videoUrl,
+                thumbnailImageId: topicDraft.thumbnailImageId || null
+              }
+            : {}),
+          ...(selectedCategoryId === 'events'
+            ? {
+                eventDate: topicDraft.eventDate || null,
+                recordingUrl: topicDraft.recordingUrl || null,
+                thumbnailImageId: topicDraft.thumbnailImageId || null
+              }
             : {})
         })
       })
@@ -390,6 +439,31 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     }
   }
 
+  const updateTopicImageTag = async () => {
+    if (!selectedTopicId || !selectedImageId) {
+      setError('Select a topic image first.')
+      return
+    }
+    const alt = selectedImageAltDraft.trim()
+    if (!alt) {
+      setError('Enter an image tag before saving.')
+      return
+    }
+    setError(null)
+    setLoading(true)
+    try {
+      await apiFetch(`/admin/topics/${selectedTopicId}/images/${selectedImageId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ alt })
+      })
+      await fetchTopic(selectedTopicId)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const fetchGalleryImages = async () => {
     if (!authHeader) return
     setError(null)
@@ -399,6 +473,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
       setGalleryImages(data)
       setSelectedGalleryImageId((prev) => (prev && data.some((img) => img.id === prev) ? prev : data[0]?.id || ''))
       setCheckedGalleryImageIds((prev) => prev.filter((id) => data.some((img) => img.id === id)))
+      const current = data.find((img) => img.id === selectedGalleryImageId) || data[0]
+      setSelectedGalleryImageAltDraft(current?.alt || '')
     } catch (e) {
       setError((e as Error).message)
     }
@@ -547,6 +623,31 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     setLoading(true)
     try {
       await apiFetch(`/admin/gallery/images/${selectedGalleryImageId}`, { method: 'DELETE' })
+      await fetchGalleryImages()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateSelectedGalleryImageTag = async () => {
+    if (!selectedGalleryImageId) {
+      setError('Select a gallery image first.')
+      return
+    }
+    const alt = selectedGalleryImageAltDraft.trim()
+    if (!alt) {
+      setError('Enter an image tag before saving.')
+      return
+    }
+    setError(null)
+    setLoading(true)
+    try {
+      await apiFetch(`/admin/gallery/images/${selectedGalleryImageId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ alt })
+      })
       await fetchGalleryImages()
     } catch (e) {
       setError((e as Error).message)
@@ -990,6 +1091,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
               </div>
 
               <div className="lg:col-span-2 space-y-4">
+                <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-indigo-700 mb-1">
+                    Consistency Guidance
+                  </p>
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    Keep the small context line short, the title clear and specific, and use the first text block as a
+                    concise summary paragraph. This keeps all pages visually consistent.
+                  </p>
+                </div>
                 <div className="rounded-2xl border border-memorial-line bg-memorial-card p-5 shadow-sm">
                   <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
                     <div>
@@ -1031,6 +1141,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                         onChange={(e) => setTopicDraft((p) => ({ ...p, eyebrow: e.target.value }))}
                         className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
                         disabled={loading || !selectedTopicId}
+                        placeholder="e.g. Her Life | Narration by Mariam Wairimu"
                       />
                     </div>
                     <div className="space-y-2">
@@ -1041,6 +1152,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                         onChange={(e) => setTopicDraft((p) => ({ ...p, tag: e.target.value }))}
                         className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
                         disabled={loading || !selectedTopicId}
+                        placeholder="e.g. Testimony, Event, Mission"
                       />
                     </div>
                   </div>
@@ -1084,6 +1196,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                       onChange={(e) => setTopicDraft((p) => ({ ...p, title: e.target.value }))}
                       className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
                       disabled={loading || !selectedTopicId}
+                      placeholder="Use a clear, short headline for this story"
                     />
                   </div>
 
@@ -1122,6 +1235,30 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                           </select>
                         ) : null}
                       </div>
+                      {images.length > 0 ? (
+                        <div className="mt-3 space-y-2">
+                          <label className="block text-xs font-bold text-memorial-muted uppercase tracking-[0.08em]">
+                            Image tag / description
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              value={selectedImageAltDraft}
+                              onChange={(e) => setSelectedImageAltDraft(e.target.value)}
+                              className="flex-1 bg-transparent border border-memorial-line rounded-xl px-3 py-2 text-sm text-memorial-ink outline-none"
+                              placeholder="Describe this image"
+                              disabled={loading}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => void updateTopicImageTag()}
+                              className="px-3 py-2 rounded-lg border border-memorial-line text-xs font-bold text-memorial-muted hover:border-memorial-accent/60 transition-colors disabled:opacity-50"
+                              disabled={loading || !selectedImageId}
+                            >
+                              Save tag
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
                       <div className="mt-4 grid grid-cols-3 gap-2 max-h-[40vh] overflow-y-auto pr-1">
                         {images.map((img) => (
                           <div
@@ -1269,6 +1406,73 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                       </div>
                     </div>
                   </div>
+
+                  {selectedCategoryId === 'videos' || selectedCategoryId === 'events' ? (
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-bold text-memorial-ink">Thumbnail image (optional)</label>
+                        <FieldHint>
+                          Pick one uploaded image to represent this item. Upload image first, then select it here.
+                        </FieldHint>
+                        <select
+                          value={topicDraft.thumbnailImageId}
+                          onChange={(e) => setTopicDraft((p) => ({ ...p, thumbnailImageId: e.target.value }))}
+                          className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                          disabled={loading || !selectedTopicId}
+                        >
+                          <option value="">No thumbnail</option>
+                          {images.map((img) => (
+                            <option key={img.id} value={img.id}>
+                              {img.alt || img.filename}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {selectedCategoryId === 'videos' ? (
+                    <div className="mt-4 grid grid-cols-1 gap-4">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-bold text-memorial-ink">Video URL</label>
+                        <FieldHint>Paste YouTube/Vimeo/self-hosted video link for this video item.</FieldHint>
+                        <input
+                          value={topicDraft.videoUrl}
+                          onChange={(e) => setTopicDraft((p) => ({ ...p, videoUrl: e.target.value }))}
+                          className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                          disabled={loading || !selectedTopicId}
+                          placeholder="https://..."
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {selectedCategoryId === 'events' ? (
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-bold text-memorial-ink">Event date (optional)</label>
+                        <FieldHint>Use the event date so the UI can determine if the event has passed.</FieldHint>
+                        <input
+                          type="date"
+                          value={topicDraft.eventDate}
+                          onChange={(e) => setTopicDraft((p) => ({ ...p, eventDate: e.target.value }))}
+                          className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                          disabled={loading || !selectedTopicId}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-bold text-memorial-ink">Recording URL (optional)</label>
+                        <FieldHint>Add this when an event has passed and a recording is available.</FieldHint>
+                        <input
+                          value={topicDraft.recordingUrl}
+                          onChange={(e) => setTopicDraft((p) => ({ ...p, recordingUrl: e.target.value }))}
+                          className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                          disabled={loading || !selectedTopicId}
+                          placeholder="https://..."
+                        />
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 {error ? <div className="text-sm text-red-600">{error}</div> : null}
@@ -1424,6 +1628,30 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                       disabled={loading || !selectedGalleryImageId || !selectedGalleryCategoryId}
                     >
                       Change selected image category
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                  <div className="lg:col-span-2">
+                    <label className="block text-sm font-bold text-memorial-muted mb-2">
+                      Selected image tag / description
+                    </label>
+                    <input
+                      value={selectedGalleryImageAltDraft}
+                      onChange={(e) => setSelectedGalleryImageAltDraft(e.target.value)}
+                      className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                      placeholder="Describe the selected gallery image"
+                      disabled={loading || !selectedGalleryImageId}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => void updateSelectedGalleryImageTag()}
+                      className="w-full px-4 py-3 rounded-full border border-memorial-line text-memorial-muted font-bold hover:border-memorial-accent/60 transition-colors disabled:opacity-50"
+                      disabled={loading || !selectedGalleryImageId}
+                    >
+                      Save selected image tag
                     </button>
                   </div>
                 </div>

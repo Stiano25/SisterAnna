@@ -8,6 +8,10 @@ export interface ContentCard {
   // When stored in Neon, story content can be a sequence of blocks.
   // We keep `body` for backwards compatibility (topic cards preview).
   blocks?: ContentBlock[]
+  videoUrl?: string
+  eventDate?: string
+  recordingUrl?: string
+  thumbnailImageId?: string
 }
 
 export type ContentBlock =

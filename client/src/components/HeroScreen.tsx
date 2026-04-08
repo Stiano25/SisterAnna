@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Cross, Search } from 'lucide-react'
+import { Cross } from 'lucide-react'
 import { useTypewriter } from '../hooks/useTypewriter'
 
 interface HeroScreenProps {
@@ -31,23 +31,23 @@ const HeroScreen: React.FC<HeroScreenProps> = ({ onExplore }) => {
   }
 
   return (
-    <div className="h-[100dvh] min-h-0 flex flex-col bg-memorial relative overflow-hidden spiritual-hero">
+    <div className="h-[100dvh] min-h-0 flex flex-col bg-memorial relative overflow-hidden spiritual-hero testimony-hero">
       <div className="absolute inset-0 z-0">
         <video
           autoPlay
           muted
           loop
           playsInline
-          className="w-full h-full object-cover opacity-10"
+          className="w-full h-full object-cover opacity-25"
         >
           <source src="/images/Rosary.mp4" type="video/mp4" />
         </video>
-        <div className="absolute inset-0 bg-gradient-to-b from-memorial/50 via-transparent to-memorial-ink/20" />
-        <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_120px_rgba(26,21,16,0.08)]" />
+        <div className="absolute inset-0 testimony-hero-overlay" />
+        <div className="absolute inset-0 pointer-events-none testimony-hero-vignette" />
       </div>
 
       <motion.div
-        className="flex-1 flex flex-col justify-center px-6 py-4 min-h-0 relative z-10 max-h-[100dvh]"
+        className="flex-1 flex flex-col justify-center px-6 py-8 min-h-0 relative z-10 max-h-[100dvh]"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -56,50 +56,52 @@ const HeroScreen: React.FC<HeroScreenProps> = ({ onExplore }) => {
           className="flex justify-center mb-4 shrink-0"
           variants={itemVariants}
         >
-          <Cross className="w-14 h-14 text-memorial-accent drop-shadow-sm" strokeWidth={0.85} />
+          <Cross className="w-12 h-12 text-memorial-accent drop-shadow-sm" strokeWidth={0.9} />
         </motion.div>
 
         <motion.div className="text-center mb-3 shrink-0" variants={itemVariants}>
-          <h1 className="font-sans text-4xl md:text-5xl text-memorial-ink leading-[0.95] tracking-tight drop-shadow-sm">
-            <div className="font-normal">Sister</div>
-            <div className="italic font-bold">Anna Ali</div>
+          <p className="text-[11px] md:text-xs text-slate-200/80 tracking-[0.14em] uppercase font-semibold">
+            Testimony Of Sister Anna Ali
+          </p>
+          <h1 className="mt-2.5 font-sans text-3xl sm:text-4xl md:text-5xl text-white leading-tight tracking-tight max-w-3xl mx-auto text-balance">
+            A Kenyan girl who experienced the wounds of Jesus on the cross
           </h1>
         </motion.div>
 
-        <motion.div className="text-center mb-3 shrink-0" variants={itemVariants}>
-          <p className="text-xs text-memorial-muted tracking-[0.15em] uppercase font-bold">
+        <motion.div className="text-center mb-2 shrink-0" variants={itemVariants}>
+          <p className="text-[11px] text-slate-200/80 tracking-[0.12em] uppercase font-semibold">
             29 Dec 1966 – 6 Jun 2012
-          </p>
-          <p className="mt-2 text-lg md:text-xl text-memorial-ink font-bold">
-            Biography of Sister Anna Ali as narrated by the family
           </p>
         </motion.div>
 
-        <motion.div className="flex justify-center mb-4 shrink-0" variants={itemVariants}>
-          <div className="w-24 h-px bg-gradient-to-r from-transparent via-memorial-accent/45 to-transparent" />
+        <motion.div className="flex justify-center mb-5 shrink-0" variants={itemVariants}>
+          <div className="w-32 h-px bg-gradient-to-r from-transparent via-indigo-300/80 to-transparent" />
         </motion.div>
 
         <motion.div
-          className="text-center mb-5 min-h-[3.5rem] flex items-center justify-center px-6 shrink-0"
+          className="text-center mb-6 min-h-[3rem] flex items-center justify-center px-2 sm:px-6 shrink-0"
           variants={itemVariants}
         >
-          <p className="font-sans text-sm md:text-lg text-memorial-muted italic leading-snug text-balance max-w-md font-medium line-clamp-3 min-h-0">
+          <p className="font-sans text-sm md:text-base text-slate-200/85 italic leading-snug text-balance max-w-xl font-medium min-h-0 line-clamp-2">
             {typewriterText}
-            <span className="animate-pulse text-memorial-muted/70">|</span>
+            <span className="animate-pulse text-indigo-200/70">|</span>
           </p>
         </motion.div>
 
         <motion.div className="flex justify-center shrink-0 pt-1" variants={itemVariants}>
           <motion.button
             onClick={onExplore}
-            className="flex items-center gap-3 px-8 py-3.5 bg-memorial-ink text-memorial-card rounded-full font-bold tracking-wide transition-shadow duration-200 min-h-[48px] shadow-lg hover:bg-memorial-ink hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-memorial-accent"
+            className="flex items-center gap-3 px-8 py-3.5 testimony-cta-button rounded-full font-bold tracking-wide transition-shadow duration-200 min-h-[48px] shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-memorial-accent"
             whileHover={{ scale: 1.02, y: -1 }}
             whileTap={{ scale: 0.98 }}
           >
-            <Search className="w-5 h-5 text-memorial-card" strokeWidth={1.5} />
             <span className="text-base">Menu</span>
           </motion.button>
         </motion.div>
+
+        <motion.p className="text-center mt-3 text-xs text-slate-300/80 max-w-xl mx-auto text-balance" variants={itemVariants}>
+          Read prayerfully and with discernment.
+        </motion.p>
       </motion.div>
     </div>
   )

@@ -74,9 +74,33 @@ router.use((req, res, next) => {
 // Middleware above guarantees `pool` exists at runtime.
 const db = pool!
 
+const REQUIRED_APP_CATEGORIES = [
+  { id: 'life', label: 'Personal life', sublabel: 'Her journey', iconName: 'Cross', sortOrder: 0 },
+  { id: 'mission', label: 'Missions', sublabel: 'Ongoing work', iconName: 'Compass', sortOrder: 1 },
+  { id: 'visions', label: 'Visions', sublabel: 'Divine encounters', iconName: 'Eye', sortOrder: 2 },
+  { id: 'gallery', label: 'Gallery', sublabel: 'Photographs', iconName: 'Image', sortOrder: 3 },
+  { id: 'videos', label: 'Videos', sublabel: 'Watch testimonies', iconName: 'Video', sortOrder: 4 },
+  { id: 'events', label: 'Events', sublabel: 'Gatherings and dates', iconName: 'Calendar', sortOrder: 5 }
+]
+
 // Categories (editable)
 router.get('/categories', async (req, res) => {
   try {
+    await Promise.all(
+      REQUIRED_APP_CATEGORIES.map(async (cat) => {
+        await db.query(
+          `
+          INSERT INTO categories (id, label, sublabel, iconName, sortOrder)
+          VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT (id) DO UPDATE
+          SET label = EXCLUDED.label,
+              sublabel = EXCLUDED.sublabel,
+              iconName = EXCLUDED.iconName
+          `,
+          [cat.id, cat.label, cat.sublabel, cat.iconName, cat.sortOrder]
+        )
+      })
+    )
     const r = await db.query(
       'SELECT id, label, sublabel, iconName, sortOrder FROM categories ORDER BY sortOrder, id ASC'
     )
@@ -161,6 +185,7 @@ router.get('/categories/:categoryId/topics', async (req, res) => {
     const r = await db.query(
       `
       SELECT id, categoryId, eyebrow, title, tag, sortOrder, summaryText, mission_status, support_link, updatedAt
+      , video_url, event_date, recording_url, thumbnail_image_id
       FROM topics
       WHERE categoryId=$1
       ORDER BY sortOrder, updatedAt DESC
@@ -261,6 +286,7 @@ router.get('/topics/:topicId', async (req, res) => {
     const topicRes = await db.query(
       `
       SELECT id, categoryId, eyebrow, title, tag, sortOrder, summaryText, mission_status, support_link, updatedAt
+      , video_url, event_date, recording_url, thumbnail_image_id
       FROM topics
       WHERE id=$1
       `,
@@ -299,13 +325,17 @@ router.get('/topics/:topicId', async (req, res) => {
 
 router.put('/topics/:topicId', async (req, res) => {
   const { topicId } = req.params
-  const { eyebrow, title, tag, blocks, missionStatus, supportLink } = req.body as {
+  const { eyebrow, title, tag, blocks, missionStatus, supportLink, videoUrl, eventDate, recordingUrl, thumbnailImageId } = req.body as {
     eyebrow?: string
     title: string
     tag?: string
     blocks: unknown
     missionStatus?: string | null
     supportLink?: string | null
+    videoUrl?: string | null
+    eventDate?: string | null
+    recordingUrl?: string | null
+    thumbnailImageId?: string | null
   }
 
   const normalizedBlocks = normalizeBlocks(blocks)
@@ -325,8 +355,12 @@ router.put('/topics/:topicId', async (req, res) => {
           summaryText=$4,
           mission_status=$5,
           support_link=$6,
+          video_url=$7,
+          event_date=$8,
+          recording_url=$9,
+          thumbnail_image_id=$10,
           updatedAt=NOW()
-      WHERE id=$7
+      WHERE id=$11
       `,
       [
         eyebrow ?? '',
@@ -335,6 +369,10 @@ router.put('/topics/:topicId', async (req, res) => {
         summaryText,
         isMission ? missionStatus ?? 'ongoing' : null,
         isMission ? supportLink ?? '' : null,
+        videoUrl ?? null,
+        eventDate || null,
+        recordingUrl ?? null,
+        thumbnailImageId ?? null,
         topicId
       ]
     )
@@ -404,6 +442,33 @@ router.post('/topics/:topicId/images', upload.array('images', 10), async (req, r
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Failed to upload images' })
+  }
+})
+
+router.put('/topics/:topicId/images/:imageId', async (req, res) => {
+  const { topicId, imageId } = req.params
+  const alt = typeof req.body?.alt === 'string' ? req.body.alt.trim() : ''
+  if (!alt) {
+    res.status(400).json({ error: 'Image tag/alt is required' })
+    return
+  }
+  try {
+    const r = await db.query(
+      `
+      UPDATE images
+      SET alt=$1
+      WHERE id=$2 AND topicId=$3
+      `,
+      [alt, imageId, topicId]
+    )
+    if (r.rowCount === 0) {
+      res.status(404).json({ error: 'Topic image not found' })
+      return
+    }
+    res.json({ ok: true })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to update topic image tag' })
   }
 })
 
@@ -648,6 +713,33 @@ router.put('/gallery/images/:imageId/category', async (req, res) => {
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Failed to update gallery image category' })
+  }
+})
+
+router.put('/gallery/images/:imageId', async (req, res) => {
+  const { imageId } = req.params
+  const alt = typeof req.body?.alt === 'string' ? req.body.alt.trim() : ''
+  if (!alt) {
+    res.status(400).json({ error: 'Image tag/alt is required' })
+    return
+  }
+  try {
+    const r = await db.query(
+      `
+      UPDATE gallery_images
+      SET alt=$1
+      WHERE id=$2
+      `,
+      [alt, imageId]
+    )
+    if (r.rowCount === 0) {
+      res.status(404).json({ error: 'Gallery image not found' })
+      return
+    }
+    res.json({ ok: true })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to update gallery image tag' })
   }
 })
 

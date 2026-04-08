@@ -57,6 +57,18 @@ const mockResults: SearchResult[] = [
     title: 'Photographs and gallery',
     category: 'Gallery',
     pageId: 'gallery'
+  },
+  {
+    id: '8',
+    title: 'Watch testimonies and devotion videos',
+    category: 'Videos',
+    pageId: 'videos'
+  },
+  {
+    id: '9',
+    title: 'Upcoming prayer gatherings and remembrance events',
+    category: 'Events',
+    pageId: 'events'
   }
 ]
 
@@ -118,8 +130,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onNavigate }) => {
 
   if (loading) {
     return (
-      <div className="p-4 sm:p-8 flex justify-center">
-        <div className="text-memorial-muted font-medium">Searching...</div>
+      <div className="p-4 sm:p-6 flex justify-center">
+        <div className="text-memorial-muted text-sm font-medium">Searching...</div>
       </div>
     )
   }
@@ -127,16 +139,16 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onNavigate }) => {
   if (results.length === 0) {
     return (
       <motion.div
-        className="p-4 sm:p-8 flex flex-col items-center justify-center text-center py-16"
+        className="p-4 sm:p-6 flex flex-col items-center justify-center text-center py-14"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
-        <SearchX className="w-16 h-16 text-memorial-muted/50 mb-6" strokeWidth={1} />
-        <p className="font-sans text-xl text-memorial-muted italic">
+        <SearchX className="w-12 h-12 text-memorial-muted/50 mb-4" strokeWidth={1} />
+        <p className="font-sans text-lg text-memorial-muted font-medium">
           No results found for &quot;{query}&quot;
         </p>
-        <p className="text-memorial-muted mt-2">
-          Try visions, personal life, missions, or gallery
+        <p className="text-memorial-muted mt-1 text-sm">
+          Try visions, personal life, missions, gallery, videos, or events
         </p>
       </motion.div>
     )
@@ -144,13 +156,13 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onNavigate }) => {
 
   return (
     <motion.div
-      className="p-4 sm:p-8"
+      className="p-4 sm:p-6"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
-      <div className="mb-6">
-        <p className="text-sm text-memorial-muted font-bold">
+      <div className="mb-4">
+        <p className="text-xs text-memorial-muted font-semibold uppercase tracking-[0.08em]">
           {results.length} result{results.length !== 1 ? 's' : ''} for &quot;{query}&quot;
         </p>
       </div>
@@ -160,22 +172,22 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onNavigate }) => {
           <motion.button
             key={result.id}
             onClick={() => onNavigate(result.pageId as PageId)}
-            className="w-full flex items-center gap-5 p-5 rounded-xl hover:bg-memorial-card spiritual-card-depth transition-all duration-200 text-left group mb-3 min-h-[64px] bg-memorial-card/70 border border-memorial-line"
+            className="w-full flex items-center gap-4 p-3.5 rounded-xl hover:bg-white spiritual-depth transition-all duration-200 text-left group mb-2.5 min-h-[56px] bg-white/85 border border-slate-200"
             variants={itemVariants}
             layout
             whileTap={{ scale: 0.98 }}
             whileHover={{ x: 4 }}
           >
             <div className="flex-1">
-              <div className="text-xs uppercase tracking-[0.1em] text-memorial-muted mb-2 font-bold">
+              <div className="text-[11px] uppercase tracking-[0.08em] text-memorial-muted mb-1 font-semibold">
                 {result.category}
               </div>
-              <div className="font-sans text-lg text-memorial-ink leading-snug font-bold">
+              <div className="font-sans text-base text-memorial-ink leading-snug font-semibold">
                 {result.title}
               </div>
             </div>
             <ChevronRight
-              className="w-5 h-5 text-memorial-accent group-hover:text-memorial-accent transition-colors flex-shrink-0"
+              className="w-4 h-4 text-indigo-600 group-hover:text-indigo-700 transition-colors flex-shrink-0"
               strokeWidth={1.5}
             />
           </motion.button>

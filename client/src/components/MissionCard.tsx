@@ -40,7 +40,7 @@ const MissionCard: React.FC<MissionCardProps> = ({ card }) => {
 
   return (
     <motion.div
-      className="border border-memorial-line rounded-2xl p-6 sm:p-8 hover:border-memorial-accent/50 spiritual-card-depth transition-all duration-300 group relative overflow-hidden bg-memorial-card"
+      className="border border-memorial-line rounded-xl p-5 sm:p-6 hover:border-memorial-accent/50 spiritual-card-depth transition-all duration-300 group relative overflow-hidden bg-memorial-card"
       whileHover="hover"
       initial="initial"
     >
@@ -54,11 +54,11 @@ const MissionCard: React.FC<MissionCardProps> = ({ card }) => {
         transition={{ duration: 0.4, ease: 'easeOut' }}
       />
 
-      <div className="flex items-center justify-between mb-6">
-        <div className="text-xs uppercase tracking-[0.15em] text-memorial-muted font-bold">
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-[11px] uppercase tracking-[0.12em] text-memorial-muted font-semibold">
           {card.eyebrow}
         </div>
-        <div className={`flex items-center gap-3 px-3 sm:px-4 py-2 rounded-full ${status.bgColor} border border-memorial-line`}>
+        <div className={`flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full ${status.bgColor} border border-memorial-line`}>
           <motion.div
             animate={card.status === 'in-progress' ? { rotate: 360 } : {}}
             transition={card.status === 'in-progress' ? { 
@@ -69,22 +69,22 @@ const MissionCard: React.FC<MissionCardProps> = ({ card }) => {
           >
             <StatusIcon className={`w-4 h-4 ${status.color}`} strokeWidth={1.5} />
           </motion.div>
-          <span className={`text-sm font-bold ${status.color}`}>
+          <span className={`text-xs font-semibold ${status.color}`}>
             {status.label}
           </span>
         </div>
       </div>
 
-      <h3 className="font-sans text-xl sm:text-2xl text-memorial-ink mb-4 leading-tight font-bold">
+      <h3 className="font-sans text-lg sm:text-xl text-memorial-ink mb-3 leading-tight font-semibold">
         {card.title}
       </h3>
 
-      <p className="text-memorial-muted leading-relaxed mb-6 text-base">
+      <p className="text-memorial-muted leading-relaxed mb-5 text-sm sm:text-base">
         {card.body}
       </p>
 
       <div className="flex items-center justify-between mb-4">
-        <span className="text-sm text-memorial-muted bg-memorial-line/50 px-4 py-2 rounded-full font-bold">
+        <span className="text-xs text-memorial-muted bg-memorial-line/50 px-3 py-1.5 rounded-full font-semibold">
           {card.tag}
         </span>
         <motion.div
@@ -101,13 +101,13 @@ const MissionCard: React.FC<MissionCardProps> = ({ card }) => {
 
       {card.supportLink && (
         <motion.div 
-          className="pt-6 border-t border-memorial-line"
+          className="pt-4 border-t border-memorial-line"
           variants={{
             initial: { opacity: 0.8 },
             hover: { opacity: 1 }
           }}
         >
-          <button className="flex items-center gap-3 text-base text-memorial-muted hover:text-memorial-accent transition-colors group/support font-bold">
+          <button className="flex items-center gap-2 text-sm text-memorial-muted hover:text-memorial-accent transition-colors group/support font-semibold">
             <HeartHandshake className="w-5 h-5 text-memorial-accent" strokeWidth={1.5} />
             <span>{card.supportLink}</span>
             <motion.div

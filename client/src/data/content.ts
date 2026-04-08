@@ -24,6 +24,18 @@ export const categories: Category[] = [
     label: 'Gallery',
     sublabel: 'Photographs',
     iconName: 'Image'
+  },
+  {
+    id: 'videos',
+    label: 'Videos',
+    sublabel: 'Watch testimonies',
+    iconName: 'Video'
+  },
+  {
+    id: 'events',
+    label: 'Events',
+    sublabel: 'Gatherings and dates',
+    iconName: 'Calendar'
   }
 ]
 
@@ -49,5 +61,15 @@ export const quickLinks: QuickLink[] = [
     id: 'q4',
     question: 'Where can I see photos of her life?',
     pageId: 'gallery'
+  },
+  {
+    id: 'q5',
+    question: 'Where can I watch videos and testimonies?',
+    pageId: 'videos'
+  },
+  {
+    id: 'q6',
+    question: 'What upcoming events can I attend?',
+    pageId: 'events'
   }
 ]

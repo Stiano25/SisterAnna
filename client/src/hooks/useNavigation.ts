@@ -2,8 +2,43 @@ import { useState, useCallback } from 'react'
 import type { PageId } from '../types'
 
 export const useNavigation = () => {
-  const initialPage: PageId =
-    typeof window !== 'undefined' && window.location.pathname === '/admin' ? 'admin' : 'home'
+  const getPageFromUrl = (): PageId => {
+    if (typeof window === 'undefined') {
+      return 'home'
+    }
+
+    if (window.location.pathname === '/admin') {
+      return 'admin'
+    }
+
+    const page = new URLSearchParams(window.location.search).get('page')
+    return page && page.trim() ? page : 'home'
+  }
+
+  const syncUrlForPage = (pageId: PageId) => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const url = new URL(window.location.href)
+
+    if (pageId === 'admin') {
+      if (window.location.pathname !== '/admin') {
+        window.history.pushState({}, '', '/admin')
+      }
+      return
+    }
+
+    url.pathname = '/'
+    if (pageId === 'home') {
+      url.searchParams.delete('page')
+    } else {
+      url.searchParams.set('page', pageId)
+    }
+    window.history.pushState({}, '', `${url.pathname}${url.search}`)
+  }
+
+  const initialPage: PageId = getPageFromUrl()
 
   const [stack, setStack] = useState<PageId[]>([initialPage])
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
@@ -12,12 +47,7 @@ export const useNavigation = () => {
 
   const goTo = useCallback((pageId: PageId) => {
     setDirection('forward')
-    if (typeof window !== 'undefined') {
-      const path = pageId === 'admin' ? '/admin' : '/'
-      if (window.location.pathname !== path) {
-        window.history.pushState({}, '', path)
-      }
-    }
+    syncUrlForPage(pageId)
     setStack(prev => [...prev, pageId])
   }, [])
 
@@ -25,22 +55,15 @@ export const useNavigation = () => {
     if (stack.length > 1) {
       setDirection('back')
       setStack(prev => prev.slice(0, -1))
-      if (typeof window !== 'undefined') {
-        const nextPage = stack[stack.length - 2]
-        const path = nextPage === 'admin' ? '/admin' : '/'
-        if (window.location.pathname !== path) {
-          window.history.pushState({}, '', path)
-        }
-      }
+      const nextPage = stack[stack.length - 2]
+      syncUrlForPage(nextPage)
     }
-  }, [stack.length])
+  }, [stack])
 
   const reset = useCallback(() => {
     setDirection('back')
     setStack(['home'])
-    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
-      window.history.pushState({}, '', '/')
-    }
+    syncUrlForPage('home')
   }, [])
 
   return {

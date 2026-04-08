@@ -25,13 +25,13 @@ const ExplorerOverlay: React.FC<ExplorerOverlayProps> = ({ onClose, onNavigate }
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
     >
       <div className="h-full flex flex-col">
-        <div className="flex items-center justify-between p-4 sm:p-8 border-b border-memorial-line spiritual-header">
-          <h2 className="font-sans text-xl sm:text-2xl italic text-memorial-ink font-bold">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-memorial-line spiritual-header">
+          <h2 className="font-sans text-lg sm:text-xl text-memorial-ink font-semibold">
             Sister Anna Ali
           </h2>
           <motion.button
             onClick={onClose}
-            className="p-3 rounded-full hover:bg-memorial-card/80 spiritual-depth transition-colors min-h-[48px] min-w-[48px] flex items-center justify-center text-memorial-accent"
+            className="p-3 rounded-full hover:bg-slate-100 spiritual-depth transition-colors min-h-[48px] min-w-[48px] flex items-center justify-center text-indigo-600"
             whileHover={{ rotate: 90, scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -39,9 +39,9 @@ const ExplorerOverlay: React.FC<ExplorerOverlayProps> = ({ onClose, onNavigate }
           </motion.button>
         </div>
 
-        <div className="px-4 sm:px-8 pt-4 sm:pt-6 pb-4 border-b border-memorial-line">
-          <div className="flex items-end gap-3">
-            <Search className="w-5 h-5 text-memorial-accent flex-shrink-0 mb-2.5" strokeWidth={1.5} />
+        <div className="px-4 sm:px-6 pt-3.5 sm:pt-4 pb-3.5 border-b border-memorial-line">
+          <div className="flex items-center gap-3 rounded-xl border border-memorial-line bg-memorial-card px-3">
+            <Search className="w-4 h-4 text-slate-500 flex-shrink-0" strokeWidth={1.8} />
             <div className="flex-1 min-w-0 relative">
               <label htmlFor="explorer-search" className="sr-only">
                 Search her story
@@ -52,14 +52,14 @@ const ExplorerOverlay: React.FC<ExplorerOverlayProps> = ({ onClose, onNavigate }
                 placeholder="Search her story…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent border-0 border-b-2 border-memorial-line focus:border-memorial-accent focus:ring-0 focus:outline-none py-2 pr-10 text-base text-memorial-ink placeholder:text-memorial-muted/70 transition-colors rounded-none shadow-none"
+                className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none py-2.5 pr-8 text-sm text-slate-900 placeholder:text-slate-400 transition-colors rounded-none shadow-none"
               />
               <AnimatePresence>
                 {searchQuery && (
                   <motion.button
                     type="button"
                     onClick={clearSearch}
-                    className="absolute right-0 bottom-2 p-1 text-memorial-muted hover:text-memorial-accent transition-colors"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-indigo-600 transition-colors"
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
@@ -74,7 +74,7 @@ const ExplorerOverlay: React.FC<ExplorerOverlayProps> = ({ onClose, onNavigate }
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-gradient-to-b from-memorial-card/50 to-memorial">
+        <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50 to-slate-100/70">
           <AnimatePresence mode="wait">
             {searchQuery ? (
               <SearchResults key="search" query={searchQuery} onNavigate={onNavigate} />

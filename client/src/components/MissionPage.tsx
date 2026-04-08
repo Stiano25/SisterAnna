@@ -60,7 +60,7 @@ const MissionPage: React.FC<MissionPageProps> = ({ onBack }) => {
       ) : (
         <>
           <div className="sticky top-0 z-10 spiritual-header border-b border-memorial-line">
-            <div className="flex items-center justify-between p-4 sm:p-8">
+            <div className="flex items-center justify-between p-4 sm:p-6">
               <div className="flex items-center gap-5">
                 <motion.button
                   onClick={onBack}
@@ -70,7 +70,7 @@ const MissionPage: React.FC<MissionPageProps> = ({ onBack }) => {
                 >
                   <ArrowLeft className="w-6 h-6" strokeWidth={1.5} />
                 </motion.button>
-                <h1 className="font-sans text-xl sm:text-2xl italic text-memorial-ink font-bold">
+                <h1 className="font-sans text-lg sm:text-xl text-memorial-ink font-semibold">
                   {categoryLabel}
                 </h1>
               </div>
@@ -78,14 +78,14 @@ const MissionPage: React.FC<MissionPageProps> = ({ onBack }) => {
             </div>
           </div>
 
-          <div className="p-4 sm:p-8 spiritual-inset space-y-8">
+          <div className="p-4 sm:p-6 spiritual-inset space-y-6">
             {quote ? (
               <motion.blockquote
-                className="spiritual-quote border-l-4 border-memorial-accent pl-4 sm:pl-8 bg-memorial-card/70 p-6 rounded-r-2xl shadow-sm"
+                className="spiritual-quote border border-memorial-line bg-memorial-card/80 p-4 sm:p-5 rounded-xl shadow-sm"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
               >
-                <p className="font-sans text-xl italic text-memorial-muted leading-relaxed">{quote}</p>
+                <p className="font-sans text-base sm:text-lg text-memorial-muted leading-relaxed">{quote}</p>
               </motion.blockquote>
             ) : null}
 
@@ -94,29 +94,39 @@ const MissionPage: React.FC<MissionPageProps> = ({ onBack }) => {
                 No mission items yet. Add topics under the Mission section in Admin when the database is connected.
               </p>
             ) : (
-              <motion.div
-                className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                {cards.map((card) => (
-                  <div
-                    key={card.id}
-                    role="button"
-                    tabIndex={0}
-                    className="cursor-pointer rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-memorial-accent focus-visible:ring-offset-2"
-                    onClick={() => setActiveCard(card)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        setActiveCard(card)
-                      }
-                    }}
-                  >
-                    <MissionCard card={card} />
-                  </div>
-                ))}
-              </motion.div>
+              <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-4 sm:gap-5">
+                <aside className="rounded-xl border border-memorial-line bg-white/90 p-4 spiritual-depth h-fit lg:sticky lg:top-24">
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-memorial-muted mb-2">
+                    Mission Overview
+                  </p>
+                  <p className="text-sm text-memorial-muted leading-relaxed">
+                    Explore ongoing work, upcoming plans, and practical ways to support each mission stream.
+                  </p>
+                </aside>
+                <motion.div
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  {cards.map((card) => (
+                    <div
+                      key={card.id}
+                      role="button"
+                      tabIndex={0}
+                      className="cursor-pointer rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-memorial-accent focus-visible:ring-offset-2"
+                      onClick={() => setActiveCard(card)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setActiveCard(card)
+                        }
+                      }}
+                    >
+                      <MissionCard card={card} />
+                    </div>
+                  ))}
+                </motion.div>
+              </div>
             )}
           </div>
         </>

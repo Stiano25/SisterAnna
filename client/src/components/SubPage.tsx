@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Eye, Cross } from 'lucide-react'
+import { ArrowLeft, Eye, Cross, Compass, Image, Video, Calendar } from 'lucide-react'
 import ContentCard from './ContentCard'
 import StoryReadingView from './StoryReadingView'
+import PageLoader from './PageLoader'
 import { categories } from '../data/content'
 import type { PageId, ContentCard as ContentCardType } from '../types'
 
@@ -19,7 +20,11 @@ interface SubPageProps {
 
 const iconMap = {
   Eye,
-  Cross
+  Cross,
+  Compass,
+  Image,
+  Video,
+  Calendar
 }
 
 const pageContent: Record<string, { quote: string; sections: StorySection[] }> = {
@@ -136,11 +141,84 @@ const pageContent: Record<string, { quote: string; sections: StorySection[] }> =
         ]
       }
     ]
+  },
+  videos: {
+    quote:
+      'Watch moments of testimony, prayer, and witness that help tell Sister Anna Ali’s story in living voice and image.',
+    sections: [
+      {
+        id: 'videos-testimonies',
+        label: 'Testimonies',
+        cards: [
+          {
+            id: 'video-family-testimony',
+            pageId: 'videos',
+            eyebrow: 'Video Witness',
+            title: 'Family Narration: The Journey of Sister Anna',
+            body:
+              'A guided narration by family members sharing key moments from her conversion, vocation, and mystical life. This section can later embed or link to the full video archive.',
+            tag: 'Family Story'
+          }
+        ]
+      },
+      {
+        id: 'videos-devotion',
+        label: 'Devotions',
+        cards: [
+          {
+            id: 'video-prayer-reflections',
+            pageId: 'videos',
+            eyebrow: 'Prayer Collection',
+            title: 'Prayer Reflections and Eucharistic Devotions',
+            body:
+              'A curated collection of prayer clips and devotion reflections inspired by her witness, prepared for pilgrims and prayer groups.',
+            tag: 'Prayer'
+          }
+        ]
+      }
+    ]
+  },
+  events: {
+    quote:
+      'Join prayer gatherings, remembrance dates, and mission events that continue the grace and witness of Sister Anna Ali.',
+    sections: [
+      {
+        id: 'events-upcoming',
+        label: 'Upcoming',
+        cards: [
+          {
+            id: 'event-prayer-day',
+            pageId: 'events',
+            eyebrow: 'Next Gathering',
+            title: 'Monthly Prayer and Reflection Day',
+            body:
+              'A recurring gathering for worship, personal testimonies, and intercessory prayer. Replace this placeholder with your confirmed venue, date, and registration details.',
+            tag: 'Prayer Event'
+          }
+        ]
+      },
+      {
+        id: 'events-remembrance',
+        label: 'Remembrance',
+        cards: [
+          {
+            id: 'event-anniversary',
+            pageId: 'events',
+            eyebrow: 'Annual Commemoration',
+            title: 'Anniversary Memorial and Pilgrimage',
+            body:
+              'An annual remembrance event centered on thanksgiving, charity outreach, and prayer in memory of Sister Anna Ali’s life and mission.',
+            tag: 'Memorial'
+          }
+        ]
+      }
+    ]
   }
 }
 
 const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
   const [content, setContent] = useState<{ quote: string; sections: StorySection[] } | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [activeSectionId, setActiveSectionId] = useState('')
   const [activeCard, setActiveCard] = useState<ContentCardType | null>(null)
 
@@ -149,6 +227,7 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
 
   useEffect(() => {
     const fetchContent = async () => {
+      setIsLoading(true)
       try {
         const response = await fetch(`/api/content/${pageId}`)
         if (response.ok) {
@@ -169,6 +248,8 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
         }
       } catch {
         setContent(pageContent[pageId] || null)
+      } finally {
+        setIsLoading(false)
       }
     }
 
@@ -186,8 +267,12 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
     return content.sections.find((s) => s.id === activeSectionId) || content.sections[0]
   }, [activeSectionId, content])
 
+  if (isLoading) {
+    return <PageLoader label="Loading section..." />
+  }
+
   if (!content || !category || !activeSection) {
-    return <div className="min-h-screen bg-memorial spiritual-page" />
+    return <PageLoader label="Preparing page..." />
   }
 
   return (
@@ -208,7 +293,7 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
       ) : (
         <>
           <div className="sticky top-0 z-10 spiritual-header border-b border-memorial-line">
-            <div className="flex items-center justify-between p-4 sm:p-8">
+            <div className="flex items-center justify-between p-4 sm:p-6">
               <div className="flex items-center gap-5">
                 <motion.button
                   onClick={onBack}
@@ -218,55 +303,56 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
                 >
                   <ArrowLeft className="w-6 h-6" strokeWidth={1.5} />
                 </motion.button>
-                <h1 className="font-sans text-xl sm:text-2xl italic text-memorial-ink font-bold">
+                <h1 className="font-sans text-lg sm:text-xl text-memorial-ink font-semibold">
                   {category.label}
                 </h1>
               </div>
-              <IconComponent className="w-10 h-10 text-memorial-accent" strokeWidth={0.8} />
+              <IconComponent className="w-8 h-8 text-memorial-accent" strokeWidth={1} />
             </div>
           </div>
 
-          <div className="p-4 sm:p-8 spiritual-inset">
-            <motion.blockquote
-              className="spiritual-quote border-l-4 border-memorial-accent pl-4 sm:pl-8 mb-6 sm:mb-8 bg-memorial-card/60 p-6 rounded-r-2xl shadow-sm"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <p className="font-sans text-xl italic text-memorial-muted leading-relaxed">{content.quote}</p>
-            </motion.blockquote>
+          <div className="p-4 sm:p-6 spiritual-inset">
+            <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-4 sm:gap-5">
+              <aside className="rounded-xl border border-memorial-line bg-white/90 p-4 spiritual-depth h-fit lg:sticky lg:top-24">
+                <motion.blockquote initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+                  <p className="font-sans text-sm text-memorial-muted leading-relaxed">{content.quote}</p>
+                </motion.blockquote>
+                <div className="mt-4 overflow-x-auto">
+                  <div className="inline-flex lg:flex lg:flex-col gap-2 min-w-full pb-1">
+                    {content.sections.map((section) => {
+                      const active = section.id === activeSection.id
+                      return (
+                        <button
+                          key={section.id}
+                          type="button"
+                          onClick={() => setActiveSectionId(section.id)}
+                          className={`px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap border transition-colors text-left ${
+                            active
+                              ? 'bg-indigo-600 text-white border-indigo-600'
+                              : 'bg-white text-memorial-muted border-memorial-line hover:border-indigo-300'
+                          }`}
+                        >
+                          {section.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </aside>
 
-            <div className="mb-6 overflow-x-auto">
-              <div className="inline-flex gap-2 min-w-full pb-1">
-                {content.sections.map((section) => {
-                  const active = section.id === activeSection.id
-                  return (
-                    <button
-                      key={section.id}
-                      type="button"
-                      onClick={() => setActiveSectionId(section.id)}
-                      className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border transition-colors ${
-                        active
-                          ? 'bg-memorial-accent text-memorial-card border-memorial-accent'
-                          : 'bg-memorial-card text-memorial-muted border-memorial-line hover:border-memorial-accent/60'
-                      }`}
-                    >
-                      {section.label}
-                    </button>
-                  )
-                })}
+              <div>
+                <motion.div
+                  key={activeSection.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
+                >
+                  {activeSection.cards.map((card) => (
+                    <ContentCard key={card.id} card={card} onOpen={(c) => setActiveCard(c)} />
+                  ))}
+                </motion.div>
               </div>
             </div>
-
-            <motion.div
-              key={activeSection.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
-            >
-              {activeSection.cards.map((card) => (
-                <ContentCard key={card.id} card={card} onOpen={(c) => setActiveCard(c)} />
-              ))}
-            </motion.div>
           </div>
         </>
       )}

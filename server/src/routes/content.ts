@@ -28,7 +28,11 @@ function mapDbTopicRow(r: any, pageId: string) {
     title: r.title,
     tag: r.tag,
     body: r.body,
-    blocks: r.blocks
+    blocks: r.blocks,
+    videoUrl: r.video_url ?? undefined,
+    eventDate: r.event_date ?? undefined,
+    recordingUrl: r.recording_url ?? undefined,
+    thumbnailImageId: r.thumbnail_image_id ?? undefined
   }
   if (pageId === 'mission' || r.mission_status != null || (r.support_link != null && r.support_link !== '')) {
     return {
@@ -92,6 +96,10 @@ router.get('/content', (req, res) => {
         t.sortOrder,
         t.mission_status,
         t.support_link,
+        t.video_url,
+        t.event_date,
+        t.recording_url,
+        t.thumbnail_image_id,
         cb.blocks
       FROM topics t
       JOIN topic_content_blocks cb ON cb.topicId = t.id
@@ -168,6 +176,10 @@ router.get('/content/:pageId', (req, res) => {
         t.sortOrder,
         t.mission_status,
         t.support_link,
+        t.video_url,
+        t.event_date,
+        t.recording_url,
+        t.thumbnail_image_id,
         cb.blocks
       FROM topics t
       JOIN topic_content_blocks cb ON cb.topicId = t.id

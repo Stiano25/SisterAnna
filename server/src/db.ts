@@ -112,6 +112,10 @@ CREATE TABLE IF NOT EXISTS admin_users (
 
 ALTER TABLE topics ADD COLUMN IF NOT EXISTS mission_status TEXT;
 ALTER TABLE topics ADD COLUMN IF NOT EXISTS support_link TEXT;
+ALTER TABLE topics ADD COLUMN IF NOT EXISTS video_url TEXT;
+ALTER TABLE topics ADD COLUMN IF NOT EXISTS event_date DATE;
+ALTER TABLE topics ADD COLUMN IF NOT EXISTS recording_url TEXT;
+ALTER TABLE topics ADD COLUMN IF NOT EXISTS thumbnail_image_id TEXT;
 ALTER TABLE gallery_images ADD COLUMN IF NOT EXISTS categoryId TEXT;
 `
 
@@ -139,6 +143,15 @@ const seedImagesSql = `
 -- Images are not present in seed.ts, but the table exists for admin uploads.
 SELECT 1;
 `
+
+const REQUIRED_APP_CATEGORIES = [
+  { id: 'life', label: 'Personal life', sublabel: 'Her journey', iconName: 'Cross', sortOrder: 0 },
+  { id: 'mission', label: 'Missions', sublabel: 'Ongoing work', iconName: 'Compass', sortOrder: 1 },
+  { id: 'visions', label: 'Visions', sublabel: 'Divine encounters', iconName: 'Eye', sortOrder: 2 },
+  { id: 'gallery', label: 'Gallery', sublabel: 'Photographs', iconName: 'Image', sortOrder: 3 },
+  { id: 'videos', label: 'Videos', sublabel: 'Watch testimonies', iconName: 'Video', sortOrder: 4 },
+  { id: 'events', label: 'Events', sublabel: 'Gatherings and dates', iconName: 'Calendar', sortOrder: 5 }
+]
 
 export async function initDb() {
   if (!pool) return false
@@ -198,6 +211,23 @@ export async function initDb() {
         })
       )
     }
+
+    // Always ensure core app categories exist (for older DBs created before new sections).
+    await Promise.all(
+      REQUIRED_APP_CATEGORIES.map(async (cat) => {
+        await pool!.query(
+          `
+          INSERT INTO categories (id, label, sublabel, iconName, sortOrder)
+          VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT (id) DO UPDATE
+          SET label = EXCLUDED.label,
+              sublabel = EXCLUDED.sublabel,
+              iconName = EXCLUDED.iconName
+          `,
+          [cat.id, cat.label, cat.sublabel, cat.iconName, cat.sortOrder]
+        )
+      })
+    )
 
     // Ensure gallery categories exist and existing images are assigned.
     await pool.query(

@@ -7,16 +7,16 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        'serif': ['Tahoma', 'Arial', 'sans-serif'],
-        'sans': ['Tahoma', 'Arial', 'sans-serif'],
+        serif: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif'],
       },
       colors: {
         memorial: {
-          DEFAULT: '#FDFAF6',
-          ink: '#1A1510',
-          muted: '#7A6F5F',
-          accent: '#8B6B3D',
-          line: '#E8E0D0',
+          DEFAULT: '#F8FAFC',
+          ink: '#0F172A',
+          muted: '#64748B',
+          accent: '#4F46E5',
+          line: '#E2E8F0',
           card: '#FFFFFF',
         },
       },

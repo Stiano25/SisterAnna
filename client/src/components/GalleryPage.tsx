@@ -69,7 +69,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onBack }) => {
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
     >
       <div className="sticky top-0 z-10 spiritual-header border-b border-memorial-line">
-        <div className="flex items-center justify-between p-4 sm:p-8">
+        <div className="flex items-center justify-between p-4 sm:p-6">
           <div className="flex items-center gap-5">
             <motion.button
               onClick={onBack}
@@ -79,7 +79,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onBack }) => {
             >
               <ArrowLeft className="w-6 h-6" strokeWidth={1.5} />
             </motion.button>
-            <h1 className="font-sans text-xl sm:text-2xl italic text-memorial-ink font-bold">
+            <h1 className="font-sans text-lg sm:text-xl text-memorial-ink font-semibold">
               Gallery
             </h1>
           </div>
@@ -87,72 +87,82 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onBack }) => {
         </div>
       </div>
 
-      <div className="p-4 sm:p-8 spiritual-inset">
+      <div className="p-4 sm:p-6 spiritual-inset">
         {loading ? (
-          <div className="rounded-2xl border border-memorial-line bg-memorial-card spiritual-card-depth p-8 sm:p-12 text-center">
-            <p className="text-memorial-muted text-lg leading-relaxed max-w-sm mx-auto">Loading gallery…</p>
+          <div className="rounded-xl border border-memorial-line bg-memorial-card spiritual-card-depth p-8 sm:p-10 text-center">
+            <p className="text-memorial-muted text-base leading-relaxed max-w-sm mx-auto">Loading gallery…</p>
           </div>
         ) : error ? (
-          <div className="rounded-2xl border border-memorial-line bg-memorial-card spiritual-card-depth p-8 sm:p-12 text-center">
+          <div className="rounded-xl border border-memorial-line bg-memorial-card spiritual-card-depth p-8 sm:p-10 text-center">
             <p className="text-red-600 text-sm leading-relaxed max-w-sm mx-auto">{error}</p>
           </div>
         ) : categories.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-memorial-line bg-memorial-card spiritual-card-depth p-8 sm:p-12 text-center">
-            <ImageIcon className="w-14 h-14 text-memorial-accent/50 mx-auto mb-6" strokeWidth={0.9} />
-            <p className="text-memorial-muted text-lg leading-relaxed max-w-sm mx-auto">
+          <div className="rounded-xl border border-dashed border-memorial-line bg-memorial-card spiritual-card-depth p-8 sm:p-10 text-center">
+            <ImageIcon className="w-12 h-12 text-memorial-accent/50 mx-auto mb-4" strokeWidth={0.9} />
+            <p className="text-memorial-muted text-base leading-relaxed max-w-sm mx-auto">
               No gallery categories have been created yet.
             </p>
           </div>
         ) : activeCategoryId === null ? (
-          <div className="rounded-2xl border border-memorial-line bg-memorial-card spiritual-card-depth p-4 sm:p-6">
-            <div className="mb-4">
-              <p className="text-memorial-muted text-sm">Choose a gallery category to view its images.</p>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {categories.map((category) => {
-                const count = images.filter((img) => img.categoryId === category.id).length
-                const cover = images.find((img) => img.categoryId === category.id)
-                return (
-                  <motion.button
-                    key={category.id}
-                    type="button"
-                    onClick={() => setActiveCategoryId(category.id)}
-                    className="p-4 border border-memorial-line rounded-2xl hover:border-memorial-accent/60 focus-visible:border-memorial-accent focus-visible:outline-none spiritual-card-depth transition-all duration-300 cursor-pointer bg-memorial-card/90 min-h-[170px] flex flex-col items-center justify-center gap-2 text-center overflow-hidden"
-                    whileHover={{ scale: 1.02, y: -2 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    {cover ? (
-                      <img
-                        src={`/api/images/gallery/${cover.id}`}
-                        alt={cover.alt || cover.filename}
-                        className="w-full h-20 object-cover rounded-xl border border-memorial-line mb-2"
-                      />
-                    ) : (
-                      <div className="w-full h-20 rounded-xl border border-memorial-line bg-memorial-card/60 mb-2" />
-                    )}
-                    <h3 className="font-sans text-base sm:text-lg text-memorial-ink leading-tight font-bold">
-                      {category.name}
-                    </h3>
-                    <div className="text-2xs uppercase tracking-[0.18em] text-memorial-muted font-bold">
-                      {count} image{count === 1 ? '' : 's'}
-                    </div>
-                  </motion.button>
-                )
-              })}
+          <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-4 sm:gap-5">
+            <aside className="rounded-xl border border-memorial-line bg-white/90 p-4 spiritual-depth h-fit lg:sticky lg:top-24">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-memorial-muted mb-2">
+                Gallery Guide
+              </p>
+              <p className="text-sm text-memorial-muted leading-relaxed">
+                Choose a category to browse images. Each category opens a focused gallery view for easier navigation.
+              </p>
+            </aside>
+            <div className="rounded-xl border border-memorial-line bg-memorial-card spiritual-card-depth p-4 sm:p-5">
+              <div className="mb-4">
+                <p className="text-memorial-muted text-sm">Choose a gallery category to view its images.</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {categories.map((category) => {
+                  const count = images.filter((img) => img.categoryId === category.id).length
+                  const cover = images.find((img) => img.categoryId === category.id)
+                  return (
+                    <motion.button
+                      key={category.id}
+                      type="button"
+                      onClick={() => setActiveCategoryId(category.id)}
+                      className="p-3.5 border border-memorial-line rounded-xl hover:border-memorial-accent/60 focus-visible:border-memorial-accent focus-visible:outline-none spiritual-card-depth transition-all duration-300 cursor-pointer bg-memorial-card/95 min-h-[150px] flex flex-col items-center justify-center gap-2 text-center overflow-hidden"
+                      whileHover={{ scale: 1.02, y: -2 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {cover ? (
+                        <img
+                          src={`/api/images/gallery/${cover.id}`}
+                          alt={cover.alt || cover.filename}
+                          className="w-full h-20 object-cover rounded-xl border border-memorial-line mb-2"
+                        />
+                      ) : (
+                        <div className="w-full h-20 rounded-xl border border-memorial-line bg-memorial-card/60 mb-2" />
+                      )}
+                      <h3 className="font-sans text-sm sm:text-base text-memorial-ink leading-tight font-semibold">
+                        {category.name}
+                      </h3>
+                      <div className="text-[11px] uppercase tracking-[0.12em] text-memorial-muted font-semibold">
+                        {count} image{count === 1 ? '' : 's'}
+                      </div>
+                    </motion.button>
+                  )
+                })}
+              </div>
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl border border-memorial-line bg-memorial-card spiritual-card-depth p-4 sm:p-6">
+          <div className="rounded-xl border border-memorial-line bg-memorial-card spiritual-card-depth p-4 sm:p-5">
             <div className="mb-4 flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => setActiveCategoryId(null)}
-                className="px-4 py-2 rounded-full text-sm font-bold border border-memorial-line text-memorial-muted hover:border-memorial-accent/60 transition-colors"
+                className="px-3.5 py-1.5 rounded-full text-xs font-semibold border border-memorial-line text-memorial-muted hover:border-memorial-accent/60 transition-colors"
               >
                 Back to categories
               </button>
             </div>
-            <h2 className="font-sans text-xl text-memorial-ink font-bold mb-4">
+            <h2 className="font-sans text-lg text-memorial-ink font-semibold mb-4">
               {categories.find((c) => c.id === activeCategoryId)?.name ?? 'Category'}
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
@@ -171,6 +181,9 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onBack }) => {
                     alt={img.alt || img.filename}
                     className="w-full h-32 sm:h-40 object-cover hover:scale-[1.02] transition-transform"
                   />
+                  <div className="px-2 py-1.5 text-[11px] text-slate-600 border-t border-slate-200 truncate">
+                    {img.alt || img.filename}
+                  </div>
                 </button>
               ))}
               {images.filter((img) => img.categoryId === activeCategoryId).length === 0 ? (
