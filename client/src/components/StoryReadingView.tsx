@@ -18,6 +18,35 @@ const renderTextParagraphs = (value: string) => {
     .filter(Boolean)
 }
 
+const getEmbedUrl = (url: string): string | null => {
+  const trimmed = url.trim()
+  if (!trimmed) return null
+  if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(trimmed)) return trimmed
+  try {
+    const parsed = new URL(trimmed)
+    const host = parsed.hostname.replace(/^www\./, '')
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      if (parsed.pathname === '/watch') {
+        const id = parsed.searchParams.get('v')
+        if (id) return `https://www.youtube.com/embed/${id}`
+      }
+      if (parsed.pathname.startsWith('/embed/')) return trimmed
+    }
+    if (host === 'youtu.be') {
+      const id = parsed.pathname.slice(1)
+      if (id) return `https://www.youtube.com/embed/${id}`
+    }
+    if (host === 'vimeo.com') {
+      const id = parsed.pathname.split('/').filter(Boolean)[0]
+      if (id) return `https://player.vimeo.com/video/${id}`
+    }
+    if (host === 'player.vimeo.com') return trimmed
+  } catch {
+    return null
+  }
+  return null
+}
+
 const StoryReadingView: React.FC<StoryReadingViewProps> = ({
   card,
   onBack,
@@ -30,6 +59,11 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
         ? card.blocks
         : [{ type: 'text', value: card.body } as ContentBlock],
     [card.blocks, card.body]
+  )
+  const videoEmbedUrl = useMemo(() => (card.videoUrl ? getEmbedUrl(card.videoUrl) : null), [card.videoUrl])
+  const isDirectVideoFile = useMemo(
+    () => Boolean(videoEmbedUrl && /\.(mp4|webm|ogg)(\?.*)?$/i.test(videoEmbedUrl)),
+    [videoEmbedUrl]
   )
 
   return (
@@ -65,15 +99,6 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
       <div className="p-4 sm:p-6">
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-4 sm:gap-6">
           <aside className="rounded-xl border border-memorial-line bg-white/90 p-4 spiritual-depth h-fit lg:sticky lg:top-24">
-            {card.thumbnailImageId ? (
-              <div className="w-full rounded-xl border border-memorial-line bg-memorial-card/60 overflow-hidden mb-4">
-                <img
-                  src={`/api/images/${card.thumbnailImageId}`}
-                  alt={card.title}
-                  className="w-full max-h-[260px] object-cover bg-memorial-card"
-                />
-              </div>
-            ) : null}
             <p className="text-[11px] normal-case tracking-[0.02em] text-memorial-muted font-medium mb-1.5">
               {card.eyebrow}
             </p>
@@ -82,7 +107,7 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
               <span className="text-xs text-memorial-muted bg-memorial-line/50 px-3 py-1.5 rounded-full font-semibold">
                 {card.tag}
               </span>
-              {card.videoUrl ? (
+              {card.videoUrl && !videoEmbedUrl ? (
                 <a
                   href={card.videoUrl}
                   target="_blank"
@@ -106,6 +131,24 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
           </aside>
 
           <article className="space-y-4">
+            {videoEmbedUrl ? (
+              <section className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                {isDirectVideoFile ? (
+                  <video controls className="w-full max-h-[60vh] bg-slate-100" src={videoEmbedUrl} />
+                ) : (
+                  <div className="relative w-full pt-[56.25%] bg-slate-100">
+                    <iframe
+                      title={`${card.title} video`}
+                      src={videoEmbedUrl}
+                      className="absolute inset-0 w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  </div>
+                )}
+              </section>
+            ) : null}
+
             {blocks.map((block, idx) => {
               if (block.type === 'image') {
                 return (

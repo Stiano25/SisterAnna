@@ -20,6 +20,15 @@ const ContentCard: React.FC<ContentCardProps> = ({ card, onOpen }) => {
       whileTap={{ scale: 0.98 }}
       onClick={() => onOpen?.(card)}
     >
+      {card.thumbnailImageId ? (
+        <div className="w-full h-28 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 mb-1">
+          <img
+            src={`/api/images/${card.thumbnailImageId}`}
+            alt={card.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ) : null}
       <div className="text-[10px] uppercase tracking-[0.12em] text-memorial-muted font-semibold">
         {card.tag}
       </div>
