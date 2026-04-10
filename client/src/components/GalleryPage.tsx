@@ -181,9 +181,6 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onBack }) => {
                     alt={img.alt || img.filename}
                     className="w-full h-32 sm:h-40 object-cover hover:scale-[1.02] transition-transform"
                   />
-                  <div className="px-2 py-1.5 text-[11px] text-slate-600 border-t border-slate-200 truncate">
-                    {img.alt || img.filename}
-                  </div>
                 </button>
               ))}
               {images.filter((img) => img.categoryId === activeCategoryId).length === 0 ? (

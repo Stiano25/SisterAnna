@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import type { ContentBlock, ContentCard } from '../types'
@@ -31,42 +31,6 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
         : [{ type: 'text', value: card.body } as ContentBlock],
     [card.blocks, card.body]
   )
-
-  const imageBlockIds = useMemo(
-    () => blocks.filter((b): b is { type: 'image'; imageId: string } => b.type === 'image').map((b) => b.imageId),
-    [blocks]
-  )
-  const imageBlockIdsKey = useMemo(() => imageBlockIds.join('|'), [imageBlockIds])
-  const [imageCaptions, setImageCaptions] = useState<Record<string, string>>({})
-
-  useEffect(() => {
-    let cancelled = false
-    const loadCaptions = async () => {
-      if (imageBlockIds.length === 0) {
-        setImageCaptions({})
-        return
-      }
-      const entries = await Promise.all(
-        imageBlockIds.map(async (id) => {
-          try {
-            const res = await fetch(`/api/images/${id}/meta`)
-            if (!res.ok) return [id, ''] as const
-            const data = (await res.json()) as { alt?: string }
-            return [id, data.alt || ''] as const
-          } catch {
-            return [id, ''] as const
-          }
-        })
-      )
-      if (!cancelled) {
-        setImageCaptions(Object.fromEntries(entries))
-      }
-    }
-    void loadCaptions()
-    return () => {
-      cancelled = true
-    }
-  }, [imageBlockIdsKey])
 
   return (
     <motion.div
@@ -154,9 +118,6 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
                       alt={card.title}
                       className="w-full max-h-[70vh] object-cover bg-slate-100"
                     />
-                    <figcaption className="px-4 py-2 text-xs text-slate-500 bg-slate-50 border-t border-slate-200">
-                      {imageCaptions[block.imageId] || card.title}
-                    </figcaption>
                   </figure>
                 )
               }
