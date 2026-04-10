@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react'
 
 const phrases = [
-  "What do you want to know about Sister Anna Ali today?",
-  "Her visions. Her life. Her miracles.",
-  "She wept tears of blood every Thursday for 25 years.",
-  "She was born Hadija. She became a saint in waiting.",
-  "Burnt Forest has known peace since the day she died."
+  "Untold stories by her Parents and siblings"
 ]
 
 export const useTypewriter = () => {
