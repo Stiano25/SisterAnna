@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sister-anna-ali.org/sitemap.xml

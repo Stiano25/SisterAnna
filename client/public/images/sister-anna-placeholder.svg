@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000" fill="none">
+  <rect width="800" height="1000" fill="#0F172A"/>
+  <rect x="32" y="32" width="736" height="936" rx="28" fill="#1E293B" stroke="#334155" stroke-width="2"/>
+  <circle cx="400" cy="360" r="120" fill="#334155"/>
+  <path d="M220 760C220 640 300 560 400 560C500 560 580 640 580 760V792H220V760Z" fill="#334155"/>
+  <text x="400" y="870" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" fill="#CBD5E1">Sister Anna Ali</text>
+</svg>
