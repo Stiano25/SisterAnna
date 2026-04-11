@@ -71,7 +71,9 @@ jspm_packages/
 
 # Gatsby files
 .cache/
-public
+# Only ignore a `public` folder at repo root (e.g. some generators). Do not ignore
+# `client/public` — Vite copies it to `dist` and assets must be committed for production.
+/public
 
 # Storybook build outputs
 .out

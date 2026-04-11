@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import type { ContentBlock, ContentCard } from '../types'
@@ -65,6 +65,40 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
     () => Boolean(videoEmbedUrl && /\.(mp4|webm|ogg)(\?.*)?$/i.test(videoEmbedUrl)),
     [videoEmbedUrl]
   )
+
+  const imageIdsInStory = useMemo(() => {
+    const ids = blocks
+      .filter((b): b is Extract<ContentBlock, { type: 'image' }> => b.type === 'image')
+      .map((b) => b.imageId)
+    return [...new Set(ids)]
+  }, [blocks])
+
+  const [imageCaptions, setImageCaptions] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (imageIdsInStory.length === 0) {
+      setImageCaptions({})
+      return
+    }
+    const ac = new AbortController()
+    void (async () => {
+      const entries = await Promise.all(
+        imageIdsInStory.map(async (id) => {
+          try {
+            const res = await fetch(`/api/images/${id}/meta`, { signal: ac.signal })
+            if (!res.ok) return [id, ''] as const
+            const data = (await res.json()) as { alt?: string }
+            return [id, (data.alt || '').trim()] as const
+          } catch {
+            return [id, ''] as const
+          }
+        })
+      )
+      if (ac.signal.aborted) return
+      setImageCaptions(Object.fromEntries(entries))
+    })()
+    return () => ac.abort()
+  }, [imageIdsInStory])
 
   return (
     <motion.div
@@ -151,6 +185,8 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
 
             {blocks.map((block, idx) => {
               if (block.type === 'image') {
+                const caption = imageCaptions[block.imageId] || ''
+                const imgAlt = caption || card.title
                 return (
                   <figure
                     key={`${block.imageId}_${idx}`}
@@ -158,9 +194,14 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
                   >
                     <img
                       src={`/api/images/${block.imageId}`}
-                      alt={card.title}
+                      alt={imgAlt}
                       className="w-full max-h-[70vh] object-cover bg-slate-100"
                     />
+                    {caption ? (
+                      <figcaption className="px-4 py-3 text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-slate-50/90">
+                        {caption}
+                      </figcaption>
+                    ) : null}
                   </figure>
                 )
               }
