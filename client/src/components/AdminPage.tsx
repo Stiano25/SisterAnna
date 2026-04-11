@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, ChevronRight, Plus, Save, Upload, Trash2 } from 'lucide-react'
+import { ArrowLeft, ChevronRight, LogOut, Plus, Save, Upload, Trash2 } from 'lucide-react'
 import type { Category, ContentBlock } from '../types'
 
 type AdminTopic = {
@@ -52,6 +52,26 @@ interface AdminPageProps {
   onBack: () => void
 }
 
+const ADMIN_TOKEN_KEY = 'sister-anna-admin-token'
+
+type TopicDraftState = {
+  eyebrow: string
+  title: string
+  tag: string
+  blocks: ContentBlock[]
+  missionStatus: string
+  supportLink: string
+  videoUrl: string
+  eventDate: string
+  recordingUrl: string
+  thumbnailImageId: string
+}
+
+type TopicBaseline = {
+  topicId: string
+  draftJson: string
+}
+
 const FieldHint: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <p className="text-xs text-memorial-muted leading-relaxed mt-1">{children}</p>
 )
@@ -59,7 +79,13 @@ const FieldHint: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [authToken, setAuthToken] = useState<string | null>(null)
+  const [authToken, setAuthToken] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(ADMIN_TOKEN_KEY)
+    } catch {
+      return null
+    }
+  })
 
   const [adminStep, setAdminStep] = useState<AdminStep>('category')
 
@@ -77,18 +103,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     iconName: 'Eye'
   })
 
-  const [topicDraft, setTopicDraft] = useState<{
-    eyebrow: string
-    title: string
-    tag: string
-    blocks: ContentBlock[]
-    missionStatus: string
-    supportLink: string
-    videoUrl: string
-    eventDate: string
-    recordingUrl: string
-    thumbnailImageId: string
-  }>({
+  const [topicDraft, setTopicDraft] = useState<TopicDraftState>({
     eyebrow: '',
     title: '',
     tag: '',
@@ -115,6 +130,44 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const topicBaselineRef = useRef<TopicBaseline | null>(null)
+
+  const clearSession = useCallback(() => {
+    try {
+      localStorage.removeItem(ADMIN_TOKEN_KEY)
+    } catch {
+      /* ignore */
+    }
+    topicBaselineRef.current = null
+    setAuthToken(null)
+  }, [])
+
+  const commitTopicBaseline = useCallback((topicId: string, draft: TopicDraftState) => {
+    topicBaselineRef.current = {
+      topicId,
+      draftJson: JSON.stringify(draft)
+    }
+  }, [])
+
+  const isTopicImageAltDirty = useCallback(() => {
+    if (!selectedTopicId || !selectedImageId) return false
+    const serverAlt = images.find((i) => i.id === selectedImageId)?.alt ?? ''
+    return selectedImageAltDraft !== serverAlt
+  }, [selectedTopicId, selectedImageId, images, selectedImageAltDraft])
+
+  const isStoryEditorDirty = useCallback(() => {
+    if (adminStep !== 'topics' || !selectedTopicId) return false
+    const b = topicBaselineRef.current
+    if (!b || b.topicId !== selectedTopicId) return false
+    if (JSON.stringify(topicDraft) !== b.draftJson) return true
+    return isTopicImageAltDirty()
+  }, [adminStep, selectedTopicId, topicDraft, isTopicImageAltDirty])
+
+  const confirmDiscardUnsavedStory = useCallback(() => {
+    if (!isStoryEditorDirty()) return true
+    return window.confirm('You have unsaved changes to this story. Leave without saving?')
+  }, [isStoryEditorDirty])
+
   const authHeader = useMemo(() => {
     if (!authToken) return null
     return { Authorization: `Bearer ${authToken}` }
@@ -130,6 +183,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
         ...authHeader
       }
     })
+    if (res.status === 401) {
+      clearSession()
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body?.error || 'Session expired. Please log in again.')
+    }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
       throw new Error(body?.error || `Request failed: ${res.status}`)
@@ -162,11 +220,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     const res = await apiFetch(`/admin/topics/${topicId}`, { method: 'GET' })
     const data = (await res.json()) as { topic: AdminTopic | null; blocks: ContentBlock[]; images: AdminImage[] }
     if (!data.topic) return
-    setSelectedTopicId(topicId)
     setImages(data.images)
-    setSelectedImageId(data.images[0]?.id || '')
-    setSelectedImageAltDraft(data.images[0]?.alt || '')
-    setTopicDraft({
+    const firstImgId = data.images[0]?.id || ''
+    const firstAlt = data.images[0]?.alt || ''
+    setSelectedImageId(firstImgId)
+    setSelectedImageAltDraft(firstAlt)
+    const draft: TopicDraftState = {
       eyebrow: data.topic.eyebrow,
       title: data.topic.title,
       tag: data.topic.tag,
@@ -177,7 +236,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
       eventDate: data.topic.event_date ? String(data.topic.event_date).slice(0, 10) : '',
       recordingUrl: data.topic.recording_url ?? '',
       thumbnailImageId: data.topic.thumbnail_image_id ?? ''
-    })
+    }
+    setTopicDraft(draft)
+    commitTopicBaseline(topicId, draft)
 
     const cat = categories.find((c) => c.id === data.topic?.categoryId)
     setCategoryDraft(cat ?? {})
@@ -271,6 +332,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
         throw new Error(body?.error || 'Login failed')
       }
       const data = (await res.json()) as { token: string }
+      try {
+        localStorage.setItem(ADMIN_TOKEN_KEY, data.token)
+      } catch {
+        /* ignore */
+      }
       setAuthToken(data.token)
     } finally {
       setLoading(false)
@@ -336,13 +402,21 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     })
   }
 
+  const trySelectTopic = (nextId: string) => {
+    if (nextId === selectedTopicId) return
+    if (!confirmDiscardUnsavedStory()) return
+    setSelectedTopicId(nextId)
+  }
+
   const backToCategoryStep = () => {
+    if (!confirmDiscardUnsavedStory()) return
     setAdminStep('category')
     setSelectedTopicId('')
   }
 
   const createTopic = async () => {
     if (!selectedCategoryId) return
+    if (!confirmDiscardUnsavedStory()) return
     setError(null)
     setLoading(true)
     try {
@@ -390,6 +464,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
             : {})
         })
       })
+      commitTopicBaseline(selectedTopicId, topicDraft)
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -403,6 +478,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     setLoading(true)
     try {
       await apiFetch(`/admin/topics/${selectedTopicId}`, { method: 'DELETE' })
+      topicBaselineRef.current = null
       setSelectedTopicId('')
       await fetchTopics(selectedCategoryId)
     } catch (e) {
@@ -427,6 +503,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
         headers: authHeader || undefined,
         body: form
       })
+      if (res.status === 401) {
+        clearSession()
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body?.error || 'Session expired. Please log in again.')
+      }
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body?.error || `Upload failed: ${res.status}`)
@@ -694,6 +775,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
         headers: authHeader || undefined,
         body: form
       })
+      if (res.status === 401) {
+        clearSession()
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body?.error || 'Session expired. Please log in again.')
+      }
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body?.error || `Upload failed: ${res.status}`)
@@ -765,6 +851,16 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
             </button>
             <h1 className="font-sans text-xl sm:text-2xl italic text-memorial-ink font-bold">Admin</h1>
           </div>
+          {authToken ? (
+            <button
+              type="button"
+              onClick={() => clearSession()}
+              className="flex items-center gap-2 px-4 py-2 rounded-full border border-memorial-line text-memorial-muted text-sm font-bold hover:border-memorial-accent/60 transition-colors"
+            >
+              <LogOut className="w-4 h-4" strokeWidth={1.5} />
+              Log out
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -822,6 +918,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
             <button
               type="button"
               onClick={() => {
+                if (adminStep === 'topics' && !confirmDiscardUnsavedStory()) return
                 setAdminStep('category')
                 setSelectedTopicId('')
               }}
@@ -860,7 +957,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
             </span>
             <button
               type="button"
-              onClick={() => setAdminStep('gallery')}
+              onClick={() => {
+                if (adminStep === 'topics' && !confirmDiscardUnsavedStory()) return
+                setAdminStep('gallery')
+              }}
               className={`px-4 py-2 rounded-full text-sm font-bold border transition-colors ${
                 adminStep === 'gallery'
                   ? 'bg-memorial-accent text-memorial-card border-memorial-accent'
@@ -1042,7 +1142,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                       <button
                         key={t.id}
                         type="button"
-                        onClick={() => setSelectedTopicId(t.id)}
+                        onClick={() => trySelectTopic(t.id)}
                         className={`w-full text-left p-3 rounded-xl border transition-colors ${
                           t.id === selectedTopicId
                             ? 'bg-memorial-accent text-memorial-card border-memorial-accent'

@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Cross } from 'lucide-react'
 import { useTypewriter } from '../hooks/useTypewriter'
+
+const PORTRAIT_SRC = '/images/SisterAnn2.JPG'
 
 interface HeroScreenProps {
   onExplore: () => void
@@ -9,6 +10,8 @@ interface HeroScreenProps {
 
 const HeroScreen: React.FC<HeroScreenProps> = ({ onExplore }) => {
   const typewriterText = useTypewriter()
+  const [bgImageFailed, setBgImageFailed] = useState(false)
+  const [avatarFailed, setAvatarFailed] = useState(false)
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -33,30 +36,39 @@ const HeroScreen: React.FC<HeroScreenProps> = ({ onExplore }) => {
   return (
     <div className="h-[100dvh] min-h-0 flex flex-col bg-memorial relative overflow-hidden spiritual-hero testimony-hero">
       <div className="absolute inset-0 z-0">
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="w-full h-full object-cover opacity-25"
-        >
-          <source src="/images/Rosary.mp4" type="video/mp4" />
-        </video>
+        {!bgImageFailed ? (
+          <img
+            src={PORTRAIT_SRC}
+            alt=""
+            className="w-full h-full object-cover object-[center_20%]"
+            onError={() => setBgImageFailed(true)}
+            aria-hidden
+          />
+        ) : null}
         <div className="absolute inset-0 testimony-hero-overlay" />
         <div className="absolute inset-0 pointer-events-none testimony-hero-vignette" />
       </div>
 
       <motion.div
-        className="flex-1 flex flex-col justify-center px-6 py-8 min-h-0 relative z-10 max-h-[100dvh]"
+        className="flex-1 flex flex-col justify-center px-6 py-8 min-h-0 relative z-10 max-h-[100dvh] overflow-y-auto"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        <motion.div
-          className="flex justify-center mb-4 shrink-0"
-          variants={itemVariants}
-        >
-          <Cross className="w-12 h-12 text-memorial-accent drop-shadow-sm" strokeWidth={0.9} />
+        <motion.div className="flex justify-center mb-4 shrink-0" variants={itemVariants}>
+          {!avatarFailed ? (
+            <img
+              src={PORTRAIT_SRC}
+              alt="Sister Anna Ali"
+              className="w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] rounded-full object-cover object-[center_15%] ring-2 ring-white/40 shadow-lg border border-white/20"
+              onError={() => setAvatarFailed(true)}
+            />
+          ) : (
+            <div
+              className="w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] rounded-full bg-white/10 ring-2 ring-white/30 border border-white/20"
+              aria-hidden
+            />
+          )}
         </motion.div>
 
         <motion.div className="text-center mb-3 shrink-0" variants={itemVariants}>
@@ -98,7 +110,6 @@ const HeroScreen: React.FC<HeroScreenProps> = ({ onExplore }) => {
             <span className="text-base">Menu</span>
           </motion.button>
         </motion.div>
-
       </motion.div>
     </div>
   )
