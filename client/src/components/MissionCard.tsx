@@ -2,6 +2,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Loader, CircleDashed, RefreshCw, CalendarDays, HeartHandshake } from 'lucide-react'
 import type { MissionCard as MissionCardType } from '../types'
+import InlineLinkedText from './InlineLinkedText'
 
 interface MissionCardProps {
   card: MissionCardType
@@ -79,8 +80,8 @@ const MissionCard: React.FC<MissionCardProps> = ({ card }) => {
         {card.title}
       </h3>
 
-      <p className="text-memorial-muted leading-relaxed mb-5 text-sm sm:text-base">
-        {card.body}
+      <p className="text-memorial-muted leading-relaxed mb-5 text-sm sm:text-base whitespace-pre-line">
+        <InlineLinkedText text={card.body} />
       </p>
 
       <div className="flex items-center justify-between mb-4">

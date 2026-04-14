@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import type { ContentBlock, ContentCard } from '../types'
+import InlineLinkedText from './InlineLinkedText'
 
 interface StoryReadingViewProps {
   card: ContentCard
@@ -215,9 +216,9 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
                     {renderTextParagraphs(block.value).map((paragraph, pIdx) => (
                       <p
                         key={`text_${idx}_p_${pIdx}`}
-                        className="text-[15px] sm:text-base text-slate-700 leading-7 sm:leading-8"
+                        className="text-[15px] sm:text-base text-slate-700 leading-7 sm:leading-8 whitespace-pre-line"
                       >
-                        {paragraph}
+                        <InlineLinkedText text={paragraph} />
                       </p>
                     ))}
                   </div>

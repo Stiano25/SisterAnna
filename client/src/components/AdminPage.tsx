@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronRight, LogOut, Plus, RotateCcw, Save, Trash2, Upload 
 import type { Category, ContentBlock } from '../types'
 import LucideIconPicker from './LucideIconPicker'
 import CssColorInput from './CssColorInput'
+import StoryLinkInsertDialog from './StoryLinkInsertDialog'
 
 type AdminTopic = {
   id: string
@@ -108,6 +109,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
   })
 
   const [sectionDeletePrompt, setSectionDeletePrompt] = useState<{ id: string; label: string } | null>(null)
+  const [storyLinkInsertBlockIdx, setStoryLinkInsertBlockIdx] = useState<number | null>(null)
 
   const [topicDraft, setTopicDraft] = useState<TopicDraftState>({
     eyebrow: '',
@@ -902,6 +904,23 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     })
   }
 
+  const appendStoryLinkMarkdown = (blockIdx: number, fragment: string) => {
+    setTopicDraft((prev) => {
+      if (blockIdx < 0 || blockIdx >= prev.blocks.length) return prev
+      const block = prev.blocks[blockIdx]
+      if (block.type !== 'text') return prev
+      const next = [...prev.blocks]
+      const cur = next[blockIdx] as { type: 'text'; value: string }
+      const v = cur.value
+      const sep = v.length > 0 && !/\s$/.test(v) ? ' ' : ''
+      next[blockIdx] = {
+        ...cur,
+        value: `${v}${sep}${fragment}`
+      }
+      return { ...prev, blocks: next }
+    })
+  }
+
   const reorderTopics = async (fromIndex: number, toIndex: number) => {
     if (!selectedCategoryId) return
     if (toIndex < 0 || toIndex >= topics.length) return
@@ -1688,20 +1707,30 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                             </div>
 
                             {block.type === 'text' ? (
-                              <textarea
-                                value={block.value}
-                                onChange={(e) => {
-                                  const value = e.target.value
-                                  setTopicDraft((p) => {
-                                    const next = [...p.blocks]
-                                    const cur = next[idx] as { type: 'text'; value: string }
-                                    next[idx] = { ...cur, value }
-                                    return { ...p, blocks: next }
-                                  })
-                                }}
-                                className="w-full min-h-[120px] bg-transparent border border-memorial-line rounded-xl px-3 py-2 text-sm text-memorial-ink outline-none"
-                                disabled={loading || !selectedTopicId}
-                              />
+                              <div className="space-y-2">
+                                <textarea
+                                  value={block.value}
+                                  onChange={(e) => {
+                                    const value = e.target.value
+                                    setTopicDraft((p) => {
+                                      const next = [...p.blocks]
+                                      const cur = next[idx] as { type: 'text'; value: string }
+                                      next[idx] = { ...cur, value }
+                                      return { ...p, blocks: next }
+                                    })
+                                  }}
+                                  className="w-full min-h-[120px] bg-transparent border border-memorial-line rounded-xl px-3 py-2 text-sm text-memorial-ink outline-none"
+                                  disabled={loading || !selectedTopicId}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setStoryLinkInsertBlockIdx(idx)}
+                                  className="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-memorial-line bg-white/90 text-sm font-bold text-memorial-ink hover:border-memorial-accent/60 transition-colors disabled:opacity-50"
+                                  disabled={loading || !selectedTopicId}
+                                >
+                                  Insert link
+                                </button>
+                              </div>
                             ) : (
                               <div className="space-y-2">
                                 <select
@@ -2074,6 +2103,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
           )}
         </div>
       )}
+
+      <StoryLinkInsertDialog
+        open={storyLinkInsertBlockIdx !== null}
+        onClose={() => setStoryLinkInsertBlockIdx(null)}
+        onInsert={(md) => {
+          if (storyLinkInsertBlockIdx === null) return
+          appendStoryLinkMarkdown(storyLinkInsertBlockIdx, md)
+        }}
+      />
 
       {sectionDeletePrompt ? (
         <div

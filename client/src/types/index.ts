@@ -15,6 +15,7 @@ export interface ContentCard {
 }
 
 export type ContentBlock =
+  /** Text blocks support inline links: `[label](https://…)` (any safe https URL, mailto:, tel:). */
   | { type: 'text'; value: string }
   | { type: 'image'; imageId: string }
 

@@ -13,10 +13,14 @@ type ContentBlock =
   | { type: 'text'; value: string }
   | { type: 'image'; imageId: string }
 
+function stripMarkdownLinks(input: string): string {
+  return input.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+}
+
 function computeSummaryText(blocks: ContentBlock[]) {
   const full = blocks
     .filter((b): b is { type: 'text'; value: string } => b.type === 'text')
-    .map((b) => b.value)
+    .map((b) => stripMarkdownLinks(b.value))
     .join(' ')
     .trim()
 
