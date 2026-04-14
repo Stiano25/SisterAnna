@@ -1,6 +1,7 @@
 import express from 'express'
 import { categories, quickLinks, allContent, missionCards } from '../data/seed.js'
 import { pool, dbEnabled } from '../db.js'
+import { normalizeCategoryRow, normalizeCategoryRows } from '../normalize/categoryRow.js'
 
 const router = express.Router()
 
@@ -23,7 +24,7 @@ const quotes: Record<string, string> = {
 function mapDbTopicRow(r: any, pageId: string) {
   const base = {
     id: r.id,
-    pageId: r.categoryId ?? r.pageId,
+    pageId: r.categoryId ?? r.categoryid ?? r.pageId ?? r.pageid ?? pageId,
     eyebrow: r.eyebrow,
     title: r.title,
     tag: r.tag,
@@ -52,9 +53,9 @@ router.get('/categories', (req, res) => {
   }
   pool
     .query(
-      'SELECT id, label, sublabel, iconName, sortOrder FROM categories ORDER BY sortOrder, id ASC'
+      'SELECT id, label, sublabel, iconName, sortOrder, card_color, text_color FROM categories ORDER BY sortOrder, id ASC'
     )
-    .then((r: { rows: any[] }) => res.json(r.rows))
+    .then((r: { rows: any[] }) => res.json(normalizeCategoryRows(r.rows)))
     .catch((err: unknown) => {
       console.error(err)
       res.status(500).json({ error: 'Failed to load categories' })
@@ -83,7 +84,9 @@ router.get('/content', (req, res) => {
     return
   }
   Promise.all([
-    pool.query('SELECT id, label, sublabel, iconName, sortOrder FROM categories ORDER BY sortOrder, id ASC'),
+    pool.query(
+      'SELECT id, label, sublabel, iconName, sortOrder, card_color, text_color FROM categories ORDER BY sortOrder, id ASC'
+    ),
     pool.query(
       `
       SELECT
@@ -109,12 +112,16 @@ router.get('/content', (req, res) => {
   ])
     .then(([categoriesRes, topicsRes]: [{ rows: any[] }, { rows: any[] }]) => {
       res.json({
-        categories: categoriesRes.rows.map((c: any) => ({
-          id: c.id,
-          label: c.label,
-          sublabel: c.sublabel,
-          iconName: c.iconName
-        })),
+        categories: normalizeCategoryRows(categoriesRes.rows).map(
+          ({ id, label, sublabel, iconName, cardColor, textColor }) => ({
+            id,
+            label,
+            sublabel,
+            iconName,
+            ...(cardColor !== undefined ? { cardColor } : {}),
+            ...(textColor !== undefined ? { textColor } : {})
+          })
+        ),
         quickLinks,
         content: topicsRes.rows.map((r: any) => mapDbTopicRow(r, r.pageId))
       })
@@ -161,7 +168,7 @@ router.get('/content/:pageId', (req, res) => {
 
   Promise.all([
     pool.query(
-      'SELECT id, label, sublabel, iconName FROM categories WHERE id=$1',
+      'SELECT id, label, sublabel, iconName, card_color, text_color FROM categories WHERE id=$1',
       [pageId]
     ),
     pool.query(
@@ -190,7 +197,7 @@ router.get('/content/:pageId', (req, res) => {
     )
   ])
     .then(([categoryRes, topicsRes]: [{ rows: any[] }, { rows: any[] }]) => {
-      const category = categoryRes.rows[0] || null
+      const category = normalizeCategoryRow(categoryRes.rows[0])
       const content = topicsRes.rows.map((r: any) => mapDbTopicRow(r, pageId))
 
       res.json({

@@ -1,14 +1,15 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { Dot, ChevronRight } from 'lucide-react'
-import { quickLinks } from '../data/content'
-import type { PageId } from '../types'
+import type { QuickLink, PageId } from '../types'
 
 interface QuickLinksProps {
   onNavigate: (pageId: PageId) => void
+  /** `null` while loading — shows skeleton. */
+  links: QuickLink[] | null
 }
 
-const QuickLinks: React.FC<QuickLinksProps> = ({ onNavigate }) => {
+const QuickLinks: React.FC<QuickLinksProps> = ({ onNavigate, links }) => {
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -29,6 +30,26 @@ const QuickLinks: React.FC<QuickLinksProps> = ({ onNavigate }) => {
     }
   }
 
+  if (links === null) {
+    return (
+      <div className="px-4 sm:px-6 pb-6 sm:pb-7" aria-busy="true" aria-label="Loading quick questions">
+        <div className="h-3.5 w-36 bg-slate-200/90 rounded animate-pulse mb-4" />
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="w-full min-h-[50px] rounded-xl border border-slate-200/80 bg-white/60 animate-pulse"
+            />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (links.length === 0) {
+    return null
+  }
+
   return (
     <div className="px-4 sm:px-6 pb-6 sm:pb-7">
       <motion.div
@@ -36,15 +57,15 @@ const QuickLinks: React.FC<QuickLinksProps> = ({ onNavigate }) => {
         initial="hidden"
         animate="visible"
       >
-        <motion.h3 
+        <motion.h3
           className="text-xs font-semibold text-memorial-muted mb-4 uppercase tracking-[0.1em]"
           variants={itemVariants}
         >
           Quick Questions
         </motion.h3>
-        
+
         <div className="space-y-2">
-          {quickLinks.map((link) => (
+          {links.map((link) => (
             <motion.button
               key={link.id}
               onClick={() => onNavigate(link.pageId as PageId)}

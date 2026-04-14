@@ -1,10 +1,13 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Search } from 'lucide-react'
 import CategoryGrid from './CategoryGrid'
 import QuickLinks from './QuickLinks'
 import SearchResults from './SearchResults'
-import type { PageId } from '../types'
+import { categories as fallbackCategories, quickLinks as fallbackQuickLinks } from '../data/content'
+import { parseExplorerNavFromContentApi } from '../utils/explorerNav'
+import type { PageId, QuickLink } from '../types'
+import type { ExplorerCategoryItem } from '../utils/explorerNav'
 
 interface ExplorerOverlayProps {
   onClose: () => void
@@ -13,6 +16,41 @@ interface ExplorerOverlayProps {
 
 const ExplorerOverlay: React.FC<ExplorerOverlayProps> = ({ onClose, onNavigate }) => {
   const [searchQuery, setSearchQuery] = useState('')
+  const [hubCategories, setHubCategories] = useState<ExplorerCategoryItem[] | null>(null)
+  const [hubQuickLinks, setHubQuickLinks] = useState<QuickLink[] | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch('/api/content')
+        if (!res.ok) throw new Error('content fetch failed')
+        const data = await res.json()
+        const parsed = parseExplorerNavFromContentApi(data)
+        if (cancelled) return
+        if (parsed && parsed.categories.length > 0) {
+          setHubCategories(parsed.categories)
+          setHubQuickLinks(parsed.quickLinks)
+        } else {
+          throw new Error('invalid payload')
+        }
+      } catch {
+        if (cancelled) return
+        setHubCategories(
+          fallbackCategories.map((c) => ({
+            id: c.id,
+            label: c.label,
+            sublabel: c.sublabel,
+            iconName: c.iconName
+          }))
+        )
+        setHubQuickLinks([...fallbackQuickLinks])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const clearSearch = () => setSearchQuery('')
 
@@ -86,8 +124,8 @@ const ExplorerOverlay: React.FC<ExplorerOverlayProps> = ({ onClose, onNavigate }
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <CategoryGrid onNavigate={onNavigate} />
-                <QuickLinks onNavigate={onNavigate} />
+                <CategoryGrid onNavigate={onNavigate} items={hubCategories} />
+                <QuickLinks onNavigate={onNavigate} links={hubQuickLinks} />
               </motion.div>
             )}
           </AnimatePresence>

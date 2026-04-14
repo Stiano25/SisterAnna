@@ -117,6 +117,9 @@ ALTER TABLE topics ADD COLUMN IF NOT EXISTS event_date DATE;
 ALTER TABLE topics ADD COLUMN IF NOT EXISTS recording_url TEXT;
 ALTER TABLE topics ADD COLUMN IF NOT EXISTS thumbnail_image_id TEXT;
 ALTER TABLE gallery_images ADD COLUMN IF NOT EXISTS categoryId TEXT;
+
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS card_color TEXT;
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS text_color TEXT;
 `
 
 /** Categories are seeded separately; $1–$9 = topic row, $10 = blocks JSON. */
@@ -212,17 +215,14 @@ export async function initDb() {
       )
     }
 
-    // Always ensure core app categories exist (for older DBs created before new sections).
+    // Ensure core app categories exist for older DBs; do not overwrite admin edits (DO NOTHING on conflict).
     await Promise.all(
       REQUIRED_APP_CATEGORIES.map(async (cat) => {
         await pool!.query(
           `
           INSERT INTO categories (id, label, sublabel, iconName, sortOrder)
           VALUES ($1, $2, $3, $4, $5)
-          ON CONFLICT (id) DO UPDATE
-          SET label = EXCLUDED.label,
-              sublabel = EXCLUDED.sublabel,
-              iconName = EXCLUDED.iconName
+          ON CONFLICT (id) DO NOTHING
           `,
           [cat.id, cat.label, cat.sublabel, cat.iconName, cat.sortOrder]
         )

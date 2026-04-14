@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Eye, Cross, Compass, Image, Video, Calendar } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import ContentCard from './ContentCard'
 import StoryReadingView from './StoryReadingView'
 import PageLoader from './PageLoader'
+import LucideDynamicIcon from './LucideDynamicIcon'
 import { categories } from '../data/content'
 import { CONTENT_UNAVAILABLE_MESSAGE } from '../constants/messages'
 import type { PageId, ContentCard as ContentCardType } from '../types'
@@ -17,15 +18,6 @@ interface StorySection {
 interface SubPageProps {
   pageId: PageId
   onBack: () => void
-}
-
-const iconMap = {
-  Eye,
-  Cross,
-  Compass,
-  Image,
-  Video,
-  Calendar
 }
 
 const pageContent: Record<string, { quote: string; sections: StorySection[] }> = {
@@ -231,7 +223,7 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
       label: pageId.charAt(0).toUpperCase() + pageId.slice(1),
       iconName: 'Cross'
     }
-  const IconComponent = iconMap[category.iconName as keyof typeof iconMap] || Cross
+  const sectionIconName = category.iconName || 'Cross'
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -241,8 +233,15 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
         if (response.ok) {
           const data = await response.json()
           const cards = (data.content || []) as ContentCardType[]
-          const categoryData = data.category as { id: string; label: string; iconName?: string } | null
-          setApiCategory(categoryData)
+          const categoryData = data.category as { id: string; label: string; iconName?: string; iconname?: string } | null
+          setApiCategory(
+            categoryData
+              ? {
+                  ...categoryData,
+                  iconName: String(categoryData.iconName ?? categoryData.iconname ?? 'Cross')
+                }
+              : null
+          )
           setContent({
             quote: data.quote,
             sections: [
@@ -315,7 +314,7 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
           card={activeCard}
           onBack={() => setActiveCard(null)}
           categoryLabel={category.label}
-          CategoryIcon={IconComponent}
+          CategoryIcon={(iconProps) => <LucideDynamicIcon name={sectionIconName} {...iconProps} />}
         />
       ) : (
         <>
@@ -334,7 +333,7 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
                   {category.label}
                 </h1>
               </div>
-              <IconComponent className="w-8 h-8 text-memorial-accent" strokeWidth={1} />
+              <LucideDynamicIcon name={sectionIconName} className="w-8 h-8 text-memorial-accent" strokeWidth={1} />
             </div>
           </div>
 

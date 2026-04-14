@@ -23,6 +23,12 @@ export interface Category {
   label: string
   sublabel: string
   iconName: string
+  /** Present when loaded from API (admin / DB). */
+  sortOrder?: number
+  /** Optional home grid card background (CSS color). */
+  cardColor?: string
+  /** Optional home grid title + subtitle color (CSS color). */
+  textColor?: string
 }
 
 export interface QuickLink {

@@ -1,8 +1,10 @@
 import express from 'express'
 import multer from 'multer'
 import { randomUUID } from 'crypto'
+import type { PoolClient } from 'pg'
 import { pool, dbEnabled } from '../db.js'
 import { requireAdmin, adminLogin } from '../middleware/adminAuth.js'
+import { normalizeCategoryRows } from '../normalize/categoryRow.js'
 
 const router = express.Router()
 const upload = multer({ storage: multer.memoryStorage() })
@@ -74,37 +76,37 @@ router.use((req, res, next) => {
 // Middleware above guarantees `pool` exists at runtime.
 const db = pool!
 
-const REQUIRED_APP_CATEGORIES = [
-  { id: 'life', label: 'Personal life', sublabel: 'Her journey', iconName: 'Cross', sortOrder: 0 },
-  { id: 'mission', label: 'Missions', sublabel: 'Ongoing work', iconName: 'Compass', sortOrder: 1 },
-  { id: 'visions', label: 'Visions', sublabel: 'Divine encounters', iconName: 'Eye', sortOrder: 2 },
-  { id: 'gallery', label: 'Gallery', sublabel: 'Photographs', iconName: 'Image', sortOrder: 3 },
-  { id: 'videos', label: 'Videos', sublabel: 'Watch testimonies', iconName: 'Video', sortOrder: 4 },
-  { id: 'events', label: 'Events', sublabel: 'Gatherings and dates', iconName: 'Calendar', sortOrder: 5 }
-]
+function sanitizeCssColor(input: unknown): string | null {
+  if (input == null) return null
+  const s = String(input).trim()
+  if (!s) return null
+  if (s.length > 64) return null
+  if (/[<>"`;]/.test(s)) return null
+  return s
+}
+
+async function runInTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+  const client = await db.connect()
+  try {
+    await client.query('BEGIN')
+    const result = await fn(client)
+    await client.query('COMMIT')
+    return result
+  } catch (err) {
+    await client.query('ROLLBACK')
+    throw err
+  } finally {
+    client.release()
+  }
+}
 
 // Categories (editable)
 router.get('/categories', async (req, res) => {
   try {
-    await Promise.all(
-      REQUIRED_APP_CATEGORIES.map(async (cat) => {
-        await db.query(
-          `
-          INSERT INTO categories (id, label, sublabel, iconName, sortOrder)
-          VALUES ($1, $2, $3, $4, $5)
-          ON CONFLICT (id) DO UPDATE
-          SET label = EXCLUDED.label,
-              sublabel = EXCLUDED.sublabel,
-              iconName = EXCLUDED.iconName
-          `,
-          [cat.id, cat.label, cat.sublabel, cat.iconName, cat.sortOrder]
-        )
-      })
-    )
     const r = await db.query(
-      'SELECT id, label, sublabel, iconName, sortOrder FROM categories ORDER BY sortOrder, id ASC'
+      'SELECT id, label, sublabel, iconName, sortOrder, card_color, text_color FROM categories ORDER BY sortOrder, id ASC'
     )
-    res.json(r.rows)
+    res.json(normalizeCategoryRows(r.rows as Record<string, unknown>[]))
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Failed to load categories' })
@@ -112,11 +114,13 @@ router.get('/categories', async (req, res) => {
 })
 
 router.post('/categories', async (req, res) => {
-  const { id, label, sublabel, iconName } = req.body as {
+  const { id, label, sublabel, iconName, cardColor, textColor } = req.body as {
     id: string
     label: string
     sublabel: string
     iconName: string
+    cardColor?: string | null
+    textColor?: string | null
   }
 
   const slug = id?.trim().toLowerCase()
@@ -129,6 +133,9 @@ router.post('/categories', async (req, res) => {
     return
   }
 
+  const card = sanitizeCssColor(cardColor)
+  const text = sanitizeCssColor(textColor)
+
   try {
     const orderRes = await db.query<{ m: string }>(
       `SELECT COALESCE(MAX(sortOrder), -1)::text AS m FROM categories`
@@ -137,10 +144,10 @@ router.post('/categories', async (req, res) => {
 
     await db.query(
       `
-      INSERT INTO categories (id, label, sublabel, iconName, sortOrder)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO categories (id, label, sublabel, iconName, sortOrder, card_color, text_color)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       `,
-      [slug, label.trim(), sublabel.trim(), iconName.trim(), sortOrder]
+      [slug, label.trim(), sublabel.trim(), iconName.trim(), sortOrder, card, text]
     )
     res.json({ ok: true, id: slug })
   } catch (err: any) {
@@ -153,27 +160,128 @@ router.post('/categories', async (req, res) => {
   }
 })
 
-router.put('/categories/:categoryId', async (req, res) => {
-  const { categoryId } = req.params
-  const { label, sublabel, iconName } = req.body as {
-    label: string
-    sublabel: string
-    iconName: string
+router.put('/categories/order', async (req, res) => {
+  const { categoryIds } = req.body as { categoryIds?: string[] }
+
+  if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
+    res.status(400).json({ error: 'categoryIds is required' })
+    return
   }
 
   try {
-    await db.query(
+    await runInTransaction(async (client) => {
+      for (let i = 0; i < categoryIds.length; i++) {
+        await client.query(
+          `
+        UPDATE categories
+        SET sortorder = $1
+        WHERE id = $2
+        `,
+          [i, categoryIds[i]]
+        )
+      }
+    })
+    res.json({ ok: true })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to reorder sections' })
+  }
+})
+
+router.put('/categories/:categoryId', async (req, res) => {
+  const { categoryId } = req.params
+  const { label, sublabel, iconName, cardColor, textColor } = req.body as {
+    label: string
+    sublabel: string
+    iconName: string
+    cardColor?: string | null
+    textColor?: string | null
+  }
+
+  const card = sanitizeCssColor(cardColor)
+  const text = sanitizeCssColor(textColor)
+
+  try {
+    const r = await db.query(
       `
       UPDATE categories
-      SET label=$1, sublabel=$2, iconName=$3
-      WHERE id=$4
+      SET label = $1, sublabel = $2, iconname = $3, card_color = $4, text_color = $5
+      WHERE id = $6
       `,
-      [label, sublabel, iconName, categoryId]
+      [label, sublabel, iconName, card, text, categoryId]
     )
+    if (r.rowCount === 0) {
+      res.status(404).json({ error: 'Section not found' })
+      return
+    }
     res.json({ ok: true })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Failed to update category' })
+  }
+})
+
+router.delete('/categories/:categoryId', async (req, res) => {
+  const { categoryId } = req.params
+
+  try {
+    await runInTransaction(async (client) => {
+      const topicIdsRes = await client.query<{ id: string }>(
+        `
+      SELECT id
+      FROM topics
+      WHERE categoryId=$1
+      `,
+        [categoryId]
+      )
+      const topicIds = topicIdsRes.rows.map((r) => r.id)
+
+      if (topicIds.length > 0) {
+        await client.query(
+          `
+        DELETE FROM images
+        WHERE topicId = ANY($1::text[])
+        `,
+          [topicIds]
+        )
+        await client.query(
+          `
+        DELETE FROM topic_content_blocks
+        WHERE topicId = ANY($1::text[])
+        `,
+          [topicIds]
+        )
+        await client.query(
+          `
+        DELETE FROM topics
+        WHERE id = ANY($1::text[])
+        `,
+          [topicIds]
+        )
+      }
+
+      const deleteCategoryRes = await client.query(
+        `
+      DELETE FROM categories
+      WHERE id=$1
+      `,
+        [categoryId]
+      )
+      if (deleteCategoryRes.rowCount === 0) {
+        const e = new Error('CATEGORY_NOT_FOUND') as Error & { code: string }
+        e.code = 'CATEGORY_NOT_FOUND'
+        throw e
+      }
+    })
+    res.json({ ok: true })
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code
+    if (code === 'CATEGORY_NOT_FOUND') {
+      res.status(404).json({ error: 'Category not found' })
+      return
+    }
+    console.error(err)
+    res.status(500).json({ error: 'Failed to delete category' })
   }
 })
 
@@ -259,21 +367,20 @@ router.put('/categories/:categoryId/topics/order', async (req, res) => {
   }
 
   try {
-    await db.query('BEGIN')
-    for (let i = 0; i < topicIds.length; i++) {
-      await db.query(
-        `
+    await runInTransaction(async (client) => {
+      for (let i = 0; i < topicIds.length; i++) {
+        await client.query(
+          `
         UPDATE topics
         SET sortOrder=$1, updatedAt=NOW()
         WHERE id=$2 AND categoryId=$3
         `,
-        [i, topicIds[i], categoryId]
-      )
-    }
-    await db.query('COMMIT')
+          [i, topicIds[i], categoryId]
+        )
+      }
+    })
     res.json({ ok: true })
   } catch (err) {
-    await db.query('ROLLBACK')
     console.error(err)
     res.status(500).json({ error: 'Failed to reorder topics' })
   }

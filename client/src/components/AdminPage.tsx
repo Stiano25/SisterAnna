@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, ChevronRight, LogOut, Plus, Save, Upload, Trash2 } from 'lucide-react'
+import { ArrowLeft, ChevronRight, LogOut, Plus, RotateCcw, Save, Trash2, Upload } from 'lucide-react'
 import type { Category, ContentBlock } from '../types'
+import LucideIconPicker from './LucideIconPicker'
+import CssColorInput from './CssColorInput'
 
 type AdminTopic = {
   id: string
@@ -100,8 +102,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     id: '',
     label: '',
     sublabel: '',
-    iconName: 'Eye'
+    iconName: 'Eye',
+    cardColor: '',
+    textColor: ''
   })
+
+  const [sectionDeletePrompt, setSectionDeletePrompt] = useState<{ id: string; label: string } | null>(null)
 
   const [topicDraft, setTopicDraft] = useState<TopicDraftState>({
     eyebrow: '',
@@ -199,7 +205,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     const res = await apiFetch('/admin/categories', { method: 'GET' })
     const data = (await res.json()) as Category[]
     setCategories(data)
-    if (!selectedCategoryId && data[0]) setSelectedCategoryId(data[0].id)
+    setSelectedCategoryId((prev) => {
+      if (!data.length) return ''
+      if (!prev || !data.some((c) => c.id === prev)) return data[0].id
+      return prev
+    })
   }
 
   const fetchTopics = async (categoryId: string, options?: { skipTopicSelection?: boolean }) => {
@@ -264,7 +274,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
 
   useEffect(() => {
     const cat = categories.find((c) => c.id === selectedCategoryId)
-    if (cat) setCategoryDraft({ ...cat })
+    if (cat) {
+      setCategoryDraft({
+        ...cat,
+        cardColor: cat.cardColor ?? '',
+        textColor: cat.textColor ?? ''
+      })
+    }
   }, [selectedCategoryId, categories])
 
   useEffect(() => {
@@ -354,9 +370,38 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
         body: JSON.stringify({
           label: categoryDraft.label,
           sublabel: categoryDraft.sublabel,
-          iconName: categoryDraft.iconName
+          iconName: categoryDraft.iconName,
+          cardColor: categoryDraft.cardColor?.trim() || null,
+          textColor: categoryDraft.textColor?.trim() || null
         })
       })
+      await fetchCategories()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const resetSectionColorsToDefault = async () => {
+    if (!selectedCategoryId) return
+    if (!categoryDraft.label || !categoryDraft.sublabel || !categoryDraft.iconName) return
+    const hasColors = Boolean(categoryDraft.cardColor?.trim() || categoryDraft.textColor?.trim())
+    if (!hasColors) return
+    setError(null)
+    setLoading(true)
+    try {
+      await apiFetch(`/admin/categories/${selectedCategoryId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          label: categoryDraft.label,
+          sublabel: categoryDraft.sublabel,
+          iconName: categoryDraft.iconName,
+          cardColor: null,
+          textColor: null
+        })
+      })
+      setCategoryDraft((p) => ({ ...p, cardColor: '', textColor: '' }))
       await fetchCategories()
     } catch (e) {
       setError((e as Error).message)
@@ -380,12 +425,58 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
           id,
           label: newCategory.label.trim(),
           sublabel: newCategory.sublabel.trim(),
-          iconName: newCategory.iconName.trim()
+          iconName: newCategory.iconName.trim(),
+          cardColor: newCategory.cardColor.trim() || null,
+          textColor: newCategory.textColor.trim() || null
         })
       })
-      setNewCategory({ id: '', label: '', sublabel: '', iconName: 'Eye' })
+      setNewCategory({ id: '', label: '', sublabel: '', iconName: 'Eye', cardColor: '', textColor: '' })
       await fetchCategories()
       setSelectedCategoryId(id)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const openSectionDeletePrompt = () => {
+    if (!selectedCategoryId) return
+    const categoryLabel = categories.find((c) => c.id === selectedCategoryId)?.label ?? selectedCategoryId
+    setSectionDeletePrompt({ id: selectedCategoryId, label: categoryLabel })
+  }
+
+  const reorderSections = async (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= categories.length) return
+    setError(null)
+    setLoading(true)
+    const next = [...categories]
+    const [moved] = next.splice(fromIndex, 1)
+    next.splice(toIndex, 0, moved)
+    try {
+      await apiFetch('/admin/categories/order', {
+        method: 'PUT',
+        body: JSON.stringify({ categoryIds: next.map((c) => c.id) })
+      })
+      await fetchCategories()
+    } catch (e) {
+      setError((e as Error).message)
+      await fetchCategories()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const confirmSectionDelete = async () => {
+    if (!sectionDeletePrompt) return
+    setSectionDeletePrompt(null)
+    setError(null)
+    setLoading(true)
+    try {
+      await apiFetch(`/admin/categories/${sectionDeletePrompt.id}`, { method: 'DELETE' })
+      await fetchCategories()
+      setTopics([])
+      setSelectedTopicId('')
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -905,74 +996,125 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
           </div>
         </div>
       ) : (
-        <div className="p-4 sm:p-8">
-          <div className="max-w-6xl mx-auto mb-4">
-            <div className="rounded-2xl border border-memorial-line bg-memorial-card/70 p-4 sm:p-5">
-              <h2 className="font-sans text-lg sm:text-xl text-memorial-ink font-bold">Content Management</h2>
-              <p className="text-sm text-memorial-muted mt-1">
-                Manage sections, stories, and gallery images from one place.
-              </p>
+        <div className="p-4 sm:p-6 pb-20">
+          <div className="sticky top-0 z-40 -mx-4 sm:-mx-6 px-4 sm:px-6 pt-1 pb-4 mb-6 bg-gradient-to-b from-memorial-card via-memorial-card/98 to-memorial-card/90 backdrop-blur-md border-b border-memorial-line shadow-sm">
+            <div className="max-w-6xl mx-auto">
+              <div className="rounded-2xl border border-memorial-line bg-memorial-card/90 p-4 sm:p-5 shadow-sm mb-4">
+                <h2 className="font-sans text-lg sm:text-xl text-memorial-ink font-bold">Content Management</h2>
+                <p className="text-sm text-memorial-muted mt-1">
+                  Jump between areas anytime — the bar stays visible while you scroll.
+                </p>
+              </div>
+              <div
+                className="flex flex-wrap gap-2"
+                role="tablist"
+                aria-label="Admin areas"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={adminStep === 'category'}
+                  onClick={() => {
+                    if (adminStep === 'topics' && !confirmDiscardUnsavedStory()) return
+                    setAdminStep('category')
+                    setSelectedTopicId('')
+                  }}
+                  className={`px-4 py-2.5 rounded-xl text-sm font-bold border transition-colors min-h-[44px] ${
+                    adminStep === 'category'
+                      ? 'bg-memorial-accent text-memorial-card border-memorial-accent shadow-md'
+                      : 'bg-white/90 text-memorial-muted border-memorial-line hover:border-memorial-accent/50'
+                  }`}
+                  title="Home navigation sections"
+                >
+                  Sections
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={adminStep === 'topics'}
+                  onClick={() => {
+                    if (!canContinueToTopics) return
+                    setAdminStep('topics')
+                    setSelectedTopicId((prev) => {
+                      if (prev && topics.some((t) => t.id === prev)) return prev
+                      return topics[0]?.id ?? ''
+                    })
+                  }}
+                  className={`px-4 py-2.5 rounded-xl text-sm font-bold border transition-colors min-h-[44px] ${
+                    adminStep === 'topics'
+                      ? 'bg-memorial-accent text-memorial-card border-memorial-accent shadow-md'
+                      : 'bg-white/90 text-memorial-muted border-memorial-line hover:border-memorial-accent/50'
+                  }`}
+                  disabled={!canContinueToTopics}
+                  title="Stories and topics"
+                >
+                  Stories
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={adminStep === 'gallery'}
+                  onClick={() => {
+                    if (adminStep === 'topics' && !confirmDiscardUnsavedStory()) return
+                    setAdminStep('gallery')
+                  }}
+                  className={`px-4 py-2.5 rounded-xl text-sm font-bold border transition-colors min-h-[44px] ${
+                    adminStep === 'gallery'
+                      ? 'bg-memorial-accent text-memorial-card border-memorial-accent shadow-md'
+                      : 'bg-white/90 text-memorial-muted border-memorial-line hover:border-memorial-accent/50'
+                  }`}
+                  title="Photo gallery"
+                >
+                  Gallery
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="flex flex-wrap gap-2 mb-6 max-w-6xl mx-auto">
-            <button
-              type="button"
-              onClick={() => {
-                if (adminStep === 'topics' && !confirmDiscardUnsavedStory()) return
-                setAdminStep('category')
-                setSelectedTopicId('')
-              }}
-              className={`px-4 py-2 rounded-full text-sm font-bold border transition-colors ${
-                adminStep === 'category'
-                  ? 'bg-memorial-accent text-memorial-card border-memorial-accent'
-                  : 'bg-memorial-card text-memorial-muted border-memorial-line hover:border-memorial-accent/50'
-              }`}
-            >
-              1. Section (navigation)
-            </button>
-            <span className="self-center text-memorial-muted text-sm" aria-hidden>
-              →
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                if (!canContinueToTopics) return
-                setAdminStep('topics')
-                setSelectedTopicId((prev) => {
-                  if (prev && topics.some((t) => t.id === prev)) return prev
-                  return topics[0]?.id ?? ''
-                })
-              }}
-              className={`px-4 py-2 rounded-full text-sm font-bold border transition-colors ${
-                adminStep === 'topics'
-                  ? 'bg-memorial-accent text-memorial-card border-memorial-accent'
-                  : 'bg-memorial-card text-memorial-muted border-memorial-line hover:border-memorial-accent/50'
-              }`}
-              disabled={!canContinueToTopics}
-            >
-              2. Stories (topics)
-            </button>
-            <span className="self-center text-memorial-muted text-sm" aria-hidden>
-              →
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                if (adminStep === 'topics' && !confirmDiscardUnsavedStory()) return
-                setAdminStep('gallery')
-              }}
-              className={`px-4 py-2 rounded-full text-sm font-bold border transition-colors ${
-                adminStep === 'gallery'
-                  ? 'bg-memorial-accent text-memorial-card border-memorial-accent'
-                  : 'bg-memorial-card text-memorial-muted border-memorial-line hover:border-memorial-accent/50'
-              }`}
-            >
-              3. Gallery
-            </button>
           </div>
 
           {adminStep === 'category' ? (
-            <div className="max-w-2xl mx-auto space-y-6">
+            <div className="max-w-6xl mx-auto space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                <div className="space-y-6 min-w-0">
+              <div className="rounded-2xl border border-memorial-line bg-memorial-card p-5 shadow-sm">
+                <div className="text-sm text-memorial-muted font-bold uppercase tracking-[0.1em] mb-2">
+                  Section order (app menu)
+                </div>
+                <p className="text-sm text-memorial-muted leading-relaxed mb-4">
+                  Top to bottom is left-to-right in the app category grid. Move sections without changing their content.
+                </p>
+                <div className="space-y-2">
+                  {categories.map((c, idx) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-memorial-line bg-white/80 px-3 py-2.5"
+                    >
+                      <span className="text-sm font-semibold text-memorial-ink truncate">{c.label}</span>
+                      <span className="text-xs font-mono text-memorial-muted shrink-0">{c.id}</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          className="px-2 py-1 rounded-lg border border-memorial-line text-sm font-bold hover:border-memorial-accent/60 disabled:opacity-40"
+                          disabled={loading || idx === 0}
+                          onClick={() => void reorderSections(idx, idx - 1)}
+                          aria-label="Move section up"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="px-2 py-1 rounded-lg border border-memorial-line text-sm font-bold hover:border-memorial-accent/60 disabled:opacity-40"
+                          disabled={loading || idx === categories.length - 1}
+                          onClick={() => void reorderSections(idx, idx + 1)}
+                          aria-label="Move section down"
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="rounded-2xl border border-memorial-line bg-memorial-card p-5 shadow-sm">
                 <div className="text-sm text-memorial-muted font-bold uppercase tracking-[0.1em] mb-2">
                   Choose or edit a section
@@ -1010,15 +1152,57 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                     onChange={(e) => setCategoryDraft((p) => ({ ...p, sublabel: e.target.value }))}
                     className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
                   />
-                  <label className="block text-sm font-bold text-memorial-ink mt-2">Icon (Lucide name)</label>
+                  <label className="block text-sm font-bold text-memorial-ink mt-2">Section icon</label>
                   <FieldHint>
-                    Must match a Lucide icon used by the app, e.g. Eye, Cross, BookOpen, Compass, Sparkles, Droplets.
+                    Search and pick any Lucide icon. Names are saved in a form the app understands (e.g. BookOpen).
                   </FieldHint>
-                  <input
-                    value={categoryDraft.iconName ?? ''}
-                    onChange={(e) => setCategoryDraft((p) => ({ ...p, iconName: e.target.value }))}
-                    className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                  <LucideIconPicker
+                    value={categoryDraft.iconName ?? 'Cross'}
+                    disabled={loading}
+                    onChange={(pascalName) => setCategoryDraft((p) => ({ ...p, iconName: pascalName }))}
                   />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <label className="block text-sm font-bold text-memorial-ink">Card background color</label>
+                      <FieldHint>Optional. Home grid only. Use the swatch or type any CSS color.</FieldHint>
+                      <CssColorInput
+                        value={categoryDraft.cardColor ?? ''}
+                        onChange={(v) => setCategoryDraft((p) => ({ ...p, cardColor: v }))}
+                        disabled={loading}
+                        placeholder="(default white)"
+                        ariaLabel="Card background color"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-memorial-ink">Title & subtitle text color</label>
+                      <FieldHint>Optional. Applies to icon, title, and subtitle on the home card.</FieldHint>
+                      <CssColorInput
+                        value={categoryDraft.textColor ?? ''}
+                        onChange={(v) => setCategoryDraft((p) => ({ ...p, textColor: v }))}
+                        disabled={loading}
+                        placeholder="(default theme)"
+                        ariaLabel="Title and subtitle text color"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void resetSectionColorsToDefault()}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-memorial-line text-sm font-bold text-memorial-ink hover:border-memorial-accent/50 hover:bg-white/80 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                      disabled={
+                        loading ||
+                        !selectedCategoryId ||
+                        (!categoryDraft.cardColor?.trim() && !categoryDraft.textColor?.trim())
+                      }
+                    >
+                      <RotateCcw className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+                      Reset colors to default
+                    </button>
+                    <p className="text-xs text-memorial-muted leading-snug sm:max-w-[min(100%,20rem)] sm:text-right">
+                      Clears custom home-card colors for this section and saves immediately (theme defaults on the public site).
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => void saveCategory()}
@@ -1028,9 +1212,20 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                     <Save className="w-5 h-5" strokeWidth={1.5} />
                     Save section
                   </button>
+                  <button
+                    type="button"
+                    onClick={openSectionDeletePrompt}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-full border border-red-300 text-red-700 font-bold hover:bg-red-50 transition-colors disabled:opacity-50"
+                    disabled={loading || !selectedCategoryId}
+                  >
+                    <Trash2 className="w-5 h-5" strokeWidth={1.5} />
+                    Delete section
+                  </button>
                 </div>
               </div>
+                </div>
 
+              <div className="space-y-6 lg:sticky lg:top-28 lg:self-start min-w-0">
               <div className="rounded-2xl border border-memorial-line bg-memorial-card p-5 shadow-sm">
                 <div className="text-sm text-memorial-muted font-bold uppercase tracking-[0.1em] mb-2">
                   Add a new section
@@ -1067,12 +1262,48 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-memorial-muted mb-1">Icon (Lucide name)</label>
-                    <input
+                    <label className="block text-sm font-bold text-memorial-muted mb-1">Section icon</label>
+                    <LucideIconPicker
                       value={newCategory.iconName}
-                      onChange={(e) => setNewCategory((p) => ({ ...p, iconName: e.target.value }))}
-                      className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                      disabled={loading}
+                      onChange={(pascalName) => setNewCategory((p) => ({ ...p, iconName: pascalName }))}
                     />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-bold text-memorial-muted mb-1">Card color (optional)</label>
+                      <CssColorInput
+                        value={newCategory.cardColor}
+                        onChange={(v) => setNewCategory((p) => ({ ...p, cardColor: v }))}
+                        disabled={loading}
+                        placeholder="#f8fafc"
+                        ariaLabel="New section card color"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-memorial-muted mb-1">Text color (optional)</label>
+                      <CssColorInput
+                        value={newCategory.textColor}
+                        onChange={(v) => setNewCategory((p) => ({ ...p, textColor: v }))}
+                        disabled={loading}
+                        placeholder="#0f172a"
+                        ariaLabel="New section text color"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNewCategory((p) => ({ ...p, cardColor: '', textColor: '' }))}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-memorial-line text-xs font-bold text-memorial-muted hover:border-memorial-accent/50 hover:text-memorial-ink transition-colors disabled:opacity-40"
+                      disabled={
+                        loading || (!newCategory.cardColor.trim() && !newCategory.textColor.trim())
+                      }
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      Clear color fields
+                    </button>
+                    <span className="text-xs text-memorial-muted">Resets the optional colors before you create the section.</span>
                   </div>
                   <button
                     type="button"
@@ -1084,6 +1315,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                     Create section
                   </button>
                 </div>
+              </div>
+              </div>
               </div>
 
               <div className="flex justify-end">
@@ -1101,7 +1334,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
               {error ? <div className="text-sm text-red-600">{error}</div> : null}
             </div>
           ) : adminStep === 'topics' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
               <div className="lg:col-span-1 space-y-4">
                 <button
                   type="button"
@@ -1841,6 +2074,49 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
           )}
         </div>
       )}
+
+      {sectionDeletePrompt ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-[1px]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-section-title"
+          onClick={() => {
+            if (!loading) setSectionDeletePrompt(null)
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-memorial-line bg-memorial-card p-6 shadow-2xl spiritual-depth"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="delete-section-title" className="text-lg font-bold text-memorial-ink">
+              Delete this section?
+            </h3>
+            <p className="mt-3 text-sm text-memorial-muted leading-relaxed">
+              <span className="font-semibold text-memorial-ink">{sectionDeletePrompt.label}</span> and all stories under it
+              will be permanently removed. This cannot be undone.
+            </p>
+            <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <button
+                type="button"
+                className="w-full sm:w-auto px-4 py-3 rounded-xl border border-memorial-line font-bold text-memorial-muted hover:bg-white/80 transition-colors"
+                onClick={() => setSectionDeletePrompt(null)}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="w-full sm:w-auto px-4 py-3 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
+                onClick={() => void confirmSectionDelete()}
+                disabled={loading}
+              >
+                Delete section
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
