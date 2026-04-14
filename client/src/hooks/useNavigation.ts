@@ -1,18 +1,37 @@
 import { useState, useCallback } from 'react'
 import type { PageId } from '../types'
 
+const pageToPath = (pageId: PageId): string => {
+  if (pageId === 'home') return '/'
+  if (pageId === 'admin') return '/admin'
+  if (pageId === 'search') return '/search'
+  return `/${encodeURIComponent(pageId)}`
+}
+
+const pathToPage = (pathname: string): PageId => {
+  if (pathname === '/admin') return 'admin'
+  if (pathname === '/search') return 'search'
+  if (pathname === '/' || pathname === '') return 'home'
+  return decodeURIComponent(pathname.slice(1))
+}
+
 export const useNavigation = () => {
   const getPageFromUrl = (): PageId => {
     if (typeof window === 'undefined') {
       return 'home'
     }
 
-    if (window.location.pathname === '/admin') {
-      return 'admin'
+    const legacyPage = new URLSearchParams(window.location.search).get('page')
+    if (legacyPage && legacyPage.trim()) {
+      const normalizedLegacyPage = legacyPage.trim()
+      const nextPath = pageToPath(normalizedLegacyPage)
+      if (window.location.pathname !== nextPath) {
+        window.history.replaceState({}, '', nextPath)
+      }
+      return normalizedLegacyPage
     }
 
-    const page = new URLSearchParams(window.location.search).get('page')
-    return page && page.trim() ? page : 'home'
+    return pathToPage(window.location.pathname)
   }
 
   const syncUrlForPage = (pageId: PageId) => {
@@ -20,22 +39,10 @@ export const useNavigation = () => {
       return
     }
 
-    const url = new URL(window.location.href)
-
-    if (pageId === 'admin') {
-      if (window.location.pathname !== '/admin') {
-        window.history.pushState({}, '', '/admin')
-      }
-      return
+    const nextPath = pageToPath(pageId)
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, '', nextPath)
     }
-
-    url.pathname = '/'
-    if (pageId === 'home') {
-      url.searchParams.delete('page')
-    } else {
-      url.searchParams.set('page', pageId)
-    }
-    window.history.pushState({}, '', `${url.pathname}${url.search}`)
   }
 
   const initialPage: PageId = getPageFromUrl()

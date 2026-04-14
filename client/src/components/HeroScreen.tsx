@@ -110,6 +110,34 @@ const HeroScreen: React.FC<HeroScreenProps> = ({ onExplore }) => {
             <span className="text-base">Menu</span>
           </motion.button>
         </motion.div>
+
+        <motion.nav
+          className="mt-5 text-center shrink-0"
+          aria-label="Key site sections"
+          variants={itemVariants}
+        >
+          <p className="text-[11px] uppercase tracking-[0.1em] text-slate-200/80 mb-2">Explore sections</p>
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs sm:text-sm">
+            <a className="text-indigo-100/90 hover:text-white underline underline-offset-2" href="/life">
+              Personal Life
+            </a>
+            <a className="text-indigo-100/90 hover:text-white underline underline-offset-2" href="/visions">
+              Visions
+            </a>
+            <a className="text-indigo-100/90 hover:text-white underline underline-offset-2" href="/mission">
+              Missions
+            </a>
+            <a className="text-indigo-100/90 hover:text-white underline underline-offset-2" href="/gallery">
+              Gallery
+            </a>
+            <a className="text-indigo-100/90 hover:text-white underline underline-offset-2" href="/videos">
+              Videos
+            </a>
+            <a className="text-indigo-100/90 hover:text-white underline underline-offset-2" href="/events">
+              Events
+            </a>
+          </div>
+        </motion.nav>
       </motion.div>
     </div>
   )

@@ -11,7 +11,7 @@ const SubPage = lazy(() => import('./components/SubPage'))
 const MissionPage = lazy(() => import('./components/MissionPage'))
 const GalleryPage = lazy(() => import('./components/GalleryPage'))
 
-const pageSeo: Record<string, { title: string; description: string }> = {
+const pageSeo: Record<string, { title: string; description: string; noindex?: boolean }> = {
   home: {
     title: 'Sister Anna Ali Legacy | Faith, Biography, and Resurrection Hope',
     description:
@@ -54,17 +54,24 @@ const pageSeo: Record<string, { title: string; description: string }> = {
   },
   admin: {
     title: 'Sister Anna Ali Admin',
-    description: 'Administration area for managing memorial content and site updates.'
+    description: 'Administration area for managing memorial content and site updates.',
+    noindex: true
   }
 }
 
 function App() {
   const { currentPage, direction, goTo, goBack, reset } = useNavigation()
   const seo = pageSeo[currentPage] ?? pageSeo.home
-  const canonicalUrl =
+  const canonicalPath =
     currentPage === 'home'
-      ? 'https://www.srannalifamily.com/'
-      : `https://www.srannalifamily.com/?page=${encodeURIComponent(currentPage)}`
+      ? '/'
+      : currentPage === 'admin'
+        ? '/admin'
+        : currentPage === 'search'
+          ? '/search'
+          : `/${encodeURIComponent(currentPage)}`
+  const canonicalUrl = `https://www.srannalifamily.com${canonicalPath}`
+  const robotsValue = seo.noindex ? 'noindex, nofollow' : 'index, follow'
 
   const renderPage = () => {
     switch (currentPage) {
@@ -100,7 +107,17 @@ function App() {
       <Helmet>
         <title>{seo.title}</title>
         <meta name="description" content={seo.description} />
+        <meta name="robots" content={robotsValue} />
         <link rel="canonical" href={canonicalUrl} />
+        <meta property="og:title" content={seo.title} />
+        <meta property="og:description" content={seo.description} />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content="https://www.srannalifamily.com/images/sister-anna-ali.jpg" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seo.title} />
+        <meta name="twitter:description" content={seo.description} />
+        <meta name="twitter:image" content="https://www.srannalifamily.com/images/sister-anna-ali.jpg" />
       </Helmet>
       <div className="mx-auto w-full max-w-none px-0">
         <AnimatePresence mode="wait" custom={direction}>
