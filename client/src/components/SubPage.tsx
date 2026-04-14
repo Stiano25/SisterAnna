@@ -5,6 +5,7 @@ import ContentCard from './ContentCard'
 import StoryReadingView from './StoryReadingView'
 import PageLoader from './PageLoader'
 import { categories } from '../data/content'
+import { CONTENT_UNAVAILABLE_MESSAGE } from '../constants/messages'
 import type { PageId, ContentCard as ContentCardType } from '../types'
 
 interface StorySection {
@@ -221,9 +222,16 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [activeSectionId, setActiveSectionId] = useState('')
   const [activeCard, setActiveCard] = useState<ContentCardType | null>(null)
+  const [apiCategory, setApiCategory] = useState<{ id: string; label: string; iconName?: string } | null>(null)
 
-  const category = categories.find((c) => c.id === pageId)
-  const IconComponent = category ? iconMap[category.iconName as keyof typeof iconMap] : Cross
+  const category =
+    apiCategory ||
+    categories.find((c) => c.id === pageId) || {
+      id: pageId,
+      label: pageId.charAt(0).toUpperCase() + pageId.slice(1),
+      iconName: 'Cross'
+    }
+  const IconComponent = iconMap[category.iconName as keyof typeof iconMap] || Cross
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -233,6 +241,8 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
         if (response.ok) {
           const data = await response.json()
           const cards = (data.content || []) as ContentCardType[]
+          const categoryData = data.category as { id: string; label: string; iconName?: string } | null
+          setApiCategory(categoryData)
           setContent({
             quote: data.quote,
             sections: [
@@ -247,6 +257,7 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
           throw new Error('API fetch failed')
         }
       } catch {
+        setApiCategory(null)
         setContent(pageContent[pageId] || null)
       } finally {
         setIsLoading(false)
@@ -275,7 +286,7 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
     return (
       <div className="min-h-screen spiritual-page flex items-center justify-center p-6">
         <p className="text-memorial-muted text-center">
-          Content is not available at the moment but will be updated soon.
+          {CONTENT_UNAVAILABLE_MESSAGE}
         </p>
       </div>
     )
@@ -285,7 +296,7 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
     return (
       <div className="min-h-screen spiritual-page flex items-center justify-center p-6">
         <p className="text-memorial-muted text-center">
-          Content is not available at the moment but will be updated soon.
+          {CONTENT_UNAVAILABLE_MESSAGE}
         </p>
       </div>
     )
@@ -369,7 +380,7 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
                     ))
                   ) : (
                     <div className="sm:col-span-2 rounded-xl border border-memorial-line bg-white/90 p-6 text-center text-memorial-muted">
-                      Content is not available at the moment but will be updated soon.
+                      {CONTENT_UNAVAILABLE_MESSAGE}
                     </div>
                   )}
                 </motion.div>

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Eye, Cross, Compass, Image, Video, Calendar } from 'lucide-react'
 import { categories } from '../data/content'
@@ -17,7 +17,39 @@ const iconMap = {
   Calendar
 }
 
+type CategoryItem = {
+  id: string
+  label: string
+  sublabel: string
+  iconName: string
+}
+
 const CategoryGrid: React.FC<CategoryGridProps> = ({ onNavigate }) => {
+  const [items, setItems] = useState<CategoryItem[]>(categories)
+
+  useEffect(() => {
+    let cancelled = false
+    const loadCategories = async () => {
+      try {
+        const response = await fetch('/api/categories')
+        if (!response.ok) throw new Error('Failed to load categories')
+        const data = (await response.json()) as CategoryItem[]
+        if (!cancelled && Array.isArray(data) && data.length > 0) {
+          setItems(data)
+        }
+      } catch {
+        if (!cancelled) {
+          setItems(categories)
+        }
+      }
+    }
+
+    void loadCategories()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -46,8 +78,8 @@ const CategoryGrid: React.FC<CategoryGridProps> = ({ onNavigate }) => {
         initial="hidden"
         animate="visible"
       >
-        {categories.map((category) => {
-          const IconComponent = iconMap[category.iconName as keyof typeof iconMap]
+        {items.map((category) => {
+          const IconComponent = iconMap[category.iconName as keyof typeof iconMap] || Cross
 
           return (
             <motion.button

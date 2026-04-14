@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, Compass } from 'lucide-react'
 import MissionCard from './MissionCard'
 import StoryReadingView from './StoryReadingView'
+import { CONTENT_UNAVAILABLE_MESSAGE } from '../constants/messages'
 import type { MissionCard as MissionCardType, ContentCard } from '../types'
 
 interface MissionPageProps {
@@ -91,7 +92,7 @@ const MissionPage: React.FC<MissionPageProps> = ({ onBack }) => {
 
             {cards.length === 0 ? (
               <p className="text-memorial-muted text-center py-12 text-sm">
-                No mission items yet. Add topics under the Mission section in Admin when the database is connected.
+                {CONTENT_UNAVAILABLE_MESSAGE}
               </p>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-4 sm:gap-5">
