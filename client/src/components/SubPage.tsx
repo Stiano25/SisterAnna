@@ -271,8 +271,24 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
     return <PageLoader label="Loading section..." />
   }
 
-  if (!content || !category || !activeSection) {
-    return <PageLoader label="Preparing page..." />
+  if (!category) {
+    return (
+      <div className="min-h-screen spiritual-page flex items-center justify-center p-6">
+        <p className="text-memorial-muted text-center">
+          Content is not available at the moment but will be updated soon.
+        </p>
+      </div>
+    )
+  }
+
+  if (!content || !activeSection) {
+    return (
+      <div className="min-h-screen spiritual-page flex items-center justify-center p-6">
+        <p className="text-memorial-muted text-center">
+          Content is not available at the moment but will be updated soon.
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -347,9 +363,15 @@ const SubPage: React.FC<SubPageProps> = ({ pageId, onBack }) => {
                   animate={{ opacity: 1, y: 0 }}
                   className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
                 >
-                  {activeSection.cards.map((card) => (
-                    <ContentCard key={card.id} card={card} onOpen={(c) => setActiveCard(c)} />
-                  ))}
+                  {activeSection.cards.length > 0 ? (
+                    activeSection.cards.map((card) => (
+                      <ContentCard key={card.id} card={card} onOpen={(c) => setActiveCard(c)} />
+                    ))
+                  ) : (
+                    <div className="sm:col-span-2 rounded-xl border border-memorial-line bg-white/90 p-6 text-center text-memorial-muted">
+                      Content is not available at the moment but will be updated soon.
+                    </div>
+                  )}
                 </motion.div>
               </div>
             </div>

@@ -112,7 +112,7 @@ const HeroScreen: React.FC<HeroScreenProps> = ({ onExplore }) => {
         </motion.div>
 
         <motion.nav
-          className="mt-5 text-center shrink-0"
+          className="sr-only"
           aria-label="Key site sections"
           variants={itemVariants}
         >

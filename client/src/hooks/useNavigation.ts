@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { PageId } from '../types'
 
 const pageToPath = (pageId: PageId): string => {
@@ -52,10 +52,22 @@ export const useNavigation = () => {
 
   const currentPage = stack[stack.length - 1]
 
+  useEffect(() => {
+    const onPopState = () => {
+      const legacyPage = new URLSearchParams(window.location.search).get('page')
+      const nextPage = legacyPage && legacyPage.trim() ? legacyPage.trim() : pathToPage(window.location.pathname)
+      setDirection('back')
+      setStack([nextPage])
+    }
+
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
   const goTo = useCallback((pageId: PageId) => {
     setDirection('forward')
     syncUrlForPage(pageId)
-    setStack(prev => [...prev, pageId])
+    setStack(prev => (prev[prev.length - 1] === pageId ? prev : [...prev, pageId]))
   }, [])
 
   const goBack = useCallback(() => {
