@@ -34,7 +34,7 @@ function isUnreachableDbError(err: unknown): boolean {
 }
 
 type ContentBlock =
-  | { type: 'text'; value: string }
+  | { type: 'text'; value: string; align?: 'left' | 'center' | 'right' }
   | { type: 'image'; imageId: string }
 
 const computeBlocksFromBody = (body: string): ContentBlock[] => [{ type: 'text', value: body }]

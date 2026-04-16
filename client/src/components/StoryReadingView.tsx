@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, X } from 'lucide-react'
 import type { ContentBlock, ContentCard } from '../types'
 import InlineLinkedText from './InlineLinkedText'
 
@@ -17,6 +17,50 @@ const renderTextParagraphs = (value: string) => {
     .split(/\n\s*\n/)
     .map((part) => part.trim())
     .filter(Boolean)
+}
+
+const getAlignmentClassName = (align: Extract<ContentBlock, { type: 'text' }>['align']) => {
+  switch (align) {
+    case 'center':
+      return 'text-center'
+    case 'right':
+      return 'text-right'
+    default:
+      return 'text-left'
+  }
+}
+
+const renderTextSegment = (segment: string, key: string, alignClassName: string) => {
+  const headingMatch = segment.match(/^(#{1,3})\s+(.+)$/s)
+  if (headingMatch) {
+    const level = headingMatch[1].length
+    const content = headingMatch[2].trim()
+    if (level === 1) {
+      return (
+        <h2 key={key} className={`font-sans text-2xl sm:text-[1.7rem] font-bold text-slate-900 leading-tight whitespace-pre-line ${alignClassName}`}>
+          <InlineLinkedText text={content} />
+        </h2>
+      )
+    }
+    if (level === 2) {
+      return (
+        <h3 key={key} className={`font-sans text-xl sm:text-[1.35rem] font-semibold text-slate-900 leading-tight whitespace-pre-line ${alignClassName}`}>
+          <InlineLinkedText text={content} />
+        </h3>
+      )
+    }
+    return (
+      <h4 key={key} className={`font-sans text-lg font-semibold text-slate-800 leading-tight whitespace-pre-line ${alignClassName}`}>
+        <InlineLinkedText text={content} />
+      </h4>
+    )
+  }
+
+  return (
+    <p key={key} className={`text-[15px] sm:text-base text-slate-700 leading-7 sm:leading-8 whitespace-pre-line ${alignClassName}`}>
+      <InlineLinkedText text={segment} />
+    </p>
+  )
 }
 
 const getEmbedUrl = (url: string): string | null => {
@@ -75,6 +119,7 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
   }, [blocks])
 
   const [imageCaptions, setImageCaptions] = useState<Record<string, string>>({})
+  const [lightboxImageId, setLightboxImageId] = useState<string | null>(null)
 
   useEffect(() => {
     if (imageIdsInStory.length === 0) {
@@ -100,6 +145,15 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
     })()
     return () => ac.abort()
   }, [imageIdsInStory])
+
+  useEffect(() => {
+    if (!lightboxImageId) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxImageId(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lightboxImageId])
 
   return (
     <motion.div
@@ -193,11 +247,18 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
                     key={`${block.imageId}_${idx}`}
                     className="w-full rounded-xl border border-slate-200 bg-white overflow-hidden"
                   >
-                    <img
-                      src={`/api/images/${block.imageId}`}
-                      alt={imgAlt}
-                      className="w-full max-h-[70vh] object-cover bg-slate-100"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => setLightboxImageId(block.imageId)}
+                      className="block w-full p-0 border-0 bg-transparent text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-memorial-accent"
+                      aria-label={`View larger: ${imgAlt}`}
+                    >
+                      <img
+                        src={`/api/images/${block.imageId}`}
+                        alt={imgAlt}
+                        className="w-full max-h-[70vh] object-cover bg-slate-100 cursor-zoom-in"
+                      />
+                    </button>
                     {caption ? (
                       <figcaption className="px-4 py-3 text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-slate-50/90">
                         {caption}
@@ -213,14 +274,9 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
                   className="rounded-xl border border-slate-200 bg-white px-5 py-4 sm:px-6 sm:py-5"
                 >
                   <div className="space-y-3">
-                    {renderTextParagraphs(block.value).map((paragraph, pIdx) => (
-                      <p
-                        key={`text_${idx}_p_${pIdx}`}
-                        className="text-[15px] sm:text-base text-slate-700 leading-7 sm:leading-8 whitespace-pre-line"
-                      >
-                        <InlineLinkedText text={paragraph} />
-                      </p>
-                    ))}
+                    {renderTextParagraphs(block.value).map((paragraph, pIdx) =>
+                      renderTextSegment(paragraph, `text_${idx}_p_${pIdx}`, getAlignmentClassName(block.align))
+                    )}
                   </div>
                 </section>
               )
@@ -228,6 +284,46 @@ const StoryReadingView: React.FC<StoryReadingViewProps> = ({
           </article>
         </div>
       </div>
+
+      {lightboxImageId ? (
+        <div
+          className="fixed inset-0 z-40 bg-black/80 p-3 sm:p-6 flex flex-col items-center justify-center"
+          onClick={() => setLightboxImageId(null)}
+          role="presentation"
+        >
+          <div
+            className="relative flex flex-col w-full max-w-[min(100vw-1.5rem,56rem)] max-h-[100dvh] min-h-0 pointer-events-auto"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Story image"
+          >
+            <button
+              type="button"
+              onClick={() => setLightboxImageId(null)}
+              className="absolute -top-1 right-0 z-10 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 border border-white/20 sm:top-0 sm:-right-1"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" strokeWidth={1.5} />
+            </button>
+            <div className="flex-1 min-h-0 flex items-center justify-center pt-10 sm:pt-8 pb-2">
+              <img
+                src={`/api/images/${lightboxImageId}`}
+                alt={imageCaptions[lightboxImageId] || card.title}
+                className="max-w-full w-auto max-h-[min(70dvh,85vw)] sm:max-h-[min(72dvh,80vw)] object-contain rounded-xl border border-white/20 shadow-lg"
+              />
+            </div>
+            {(imageCaptions[lightboxImageId] || '').trim() ? (
+              <p className="text-center text-sm sm:text-base text-white/95 px-2 pt-3 pb-1 max-w-lg mx-auto leading-relaxed">
+                {imageCaptions[lightboxImageId]}
+              </p>
+            ) : null}
+            <p className="text-center text-[11px] uppercase tracking-[0.12em] text-white/55 pb-2">
+              Tap outside to close
+            </p>
+          </div>
+        </div>
+      ) : null}
     </motion.div>
   )
 }

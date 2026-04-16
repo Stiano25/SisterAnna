@@ -49,6 +49,19 @@ type AdminGalleryCategory = {
   createdAt: string
 }
 
+/** Update sortOrder for images in one category; list order elsewhere unchanged — always sort by sortOrder when displaying. */
+const applyGalleryImageOrder = (
+  prev: AdminGalleryImage[],
+  categoryId: string,
+  orderedIds: string[]
+): AdminGalleryImage[] =>
+  prev.map((img) => {
+    if (img.categoryId !== categoryId) return img
+    const pos = orderedIds.indexOf(img.id)
+    if (pos === -1) return img
+    return { ...img, sortOrder: pos }
+  })
+
 type AdminStep = 'category' | 'topics' | 'gallery'
 
 interface AdminPageProps {
@@ -131,6 +144,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
   const [editingGalleryCategoryName, setEditingGalleryCategoryName] = useState('')
   const [selectedGalleryImageId, setSelectedGalleryImageId] = useState<string>('')
   const [checkedGalleryImageIds, setCheckedGalleryImageIds] = useState<string[]>([])
+  const [draggingGalleryImageId, setDraggingGalleryImageId] = useState<string | null>(null)
+  const [galleryDropTargetId, setGalleryDropTargetId] = useState<string | null>(null)
 
   const [selectedImageId, setSelectedImageId] = useState<string>('')
   const [selectedImageAltDraft, setSelectedImageAltDraft] = useState('')
@@ -139,6 +154,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
   const [error, setError] = useState<string | null>(null)
 
   const topicBaselineRef = useRef<TopicBaseline | null>(null)
+  const textBlockRefs = useRef<Record<number, HTMLTextAreaElement | null>>({})
 
   const clearSession = useCallback(() => {
     try {
@@ -654,6 +670,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     }
   }
 
+  const galleryImagesInCategorySorted = useCallback(
+    (categoryId: string) =>
+      galleryImages
+        .filter((img) => img.categoryId === categoryId)
+        .sort((a, b) => a.sortOrder - b.sortOrder),
+    [galleryImages]
+  )
+
   const fetchGalleryCategories = async () => {
     if (!authHeader) return
     setError(null)
@@ -904,6 +928,71 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     })
   }
 
+  const wrapSelectedTextInBlock = (
+    blockIdx: number,
+    before: string,
+    after: string,
+    fallbackText: string
+  ) => {
+    const el = textBlockRefs.current[blockIdx]
+    setTopicDraft((prev) => {
+      if (blockIdx < 0 || blockIdx >= prev.blocks.length) return prev
+      const block = prev.blocks[blockIdx]
+      if (block.type !== 'text') return prev
+      const next = [...prev.blocks]
+      const cur = next[blockIdx] as { type: 'text'; value: string; align?: 'left' | 'center' | 'right' }
+      const value = cur.value
+      const start = el?.selectionStart ?? value.length
+      const end = el?.selectionEnd ?? value.length
+      const selected = value.slice(start, end) || fallbackText
+      next[blockIdx] = {
+        ...cur,
+        value: `${value.slice(0, start)}${before}${selected}${after}${value.slice(end)}`
+      }
+      return { ...prev, blocks: next }
+    })
+    window.requestAnimationFrame(() => {
+      const nextEl = textBlockRefs.current[blockIdx]
+      nextEl?.focus()
+    })
+  }
+
+  const addHeadingToBlockLine = (blockIdx: number) => {
+    const el = textBlockRefs.current[blockIdx]
+    setTopicDraft((prev) => {
+      if (blockIdx < 0 || blockIdx >= prev.blocks.length) return prev
+      const block = prev.blocks[blockIdx]
+      if (block.type !== 'text') return prev
+      const next = [...prev.blocks]
+      const cur = next[blockIdx] as { type: 'text'; value: string; align?: 'left' | 'center' | 'right' }
+      const value = cur.value
+      const start = el?.selectionStart ?? value.length
+      const lineStart = value.lastIndexOf('\n', Math.max(0, start - 1)) + 1
+      if (value.slice(lineStart).startsWith('# ')) return prev
+      next[blockIdx] = {
+        ...cur,
+        value: `${value.slice(0, lineStart)}# ${value.slice(lineStart)}`
+      }
+      return { ...prev, blocks: next }
+    })
+    window.requestAnimationFrame(() => {
+      const nextEl = textBlockRefs.current[blockIdx]
+      nextEl?.focus()
+    })
+  }
+
+  const setTextBlockAlignment = (blockIdx: number, align: 'left' | 'center' | 'right') => {
+    setTopicDraft((prev) => {
+      if (blockIdx < 0 || blockIdx >= prev.blocks.length) return prev
+      const block = prev.blocks[blockIdx]
+      if (block.type !== 'text') return prev
+      const next = [...prev.blocks]
+      const cur = next[blockIdx] as { type: 'text'; value: string; align?: 'left' | 'center' | 'right' }
+      next[blockIdx] = { ...cur, align }
+      return { ...prev, blocks: next }
+    })
+  }
+
   const appendStoryLinkMarkdown = (blockIdx: number, fragment: string) => {
     setTopicDraft((prev) => {
       if (blockIdx < 0 || blockIdx >= prev.blocks.length) return prev
@@ -919,6 +1008,83 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
       }
       return { ...prev, blocks: next }
     })
+  }
+
+  const reorderSelectedGalleryImage = async (dir: -1 | 1) => {
+    if (!selectedGalleryImageId) {
+      setError('Select a gallery image first.')
+      return
+    }
+    const selected = galleryImages.find((img) => img.id === selectedGalleryImageId)
+    if (!selected) {
+      setError('Selected image could not be found.')
+      return
+    }
+    const categoryImages = galleryImagesInCategorySorted(selected.categoryId)
+    const idx = categoryImages.findIndex((img) => img.id === selectedGalleryImageId)
+    if (idx < 0) return
+    const to = idx + dir
+    if (to < 0 || to >= categoryImages.length) return
+    const nextCategoryImages = [...categoryImages]
+    ;[nextCategoryImages[idx], nextCategoryImages[to]] = [nextCategoryImages[to], nextCategoryImages[idx]]
+    const orderedIds = nextCategoryImages.map((img) => img.id)
+    setError(null)
+    setGalleryImages((prev) => applyGalleryImageOrder(prev, selected.categoryId, orderedIds))
+    try {
+      await apiFetch('/admin/gallery/images/order', {
+        method: 'PUT',
+        body: JSON.stringify({
+          categoryId: selected.categoryId,
+          imageIds: orderedIds
+        })
+      })
+    } catch (e) {
+      setError((e as Error).message)
+      await fetchGalleryImages()
+    }
+  }
+
+  const reorderGalleryImagesInCategory = async (categoryId: string, orderedImageIds: string[]) => {
+    if (!categoryId || orderedImageIds.length === 0) return
+    setError(null)
+    setGalleryImages((prev) => applyGalleryImageOrder(prev, categoryId, orderedImageIds))
+    setDraggingGalleryImageId(null)
+    setGalleryDropTargetId(null)
+    try {
+      await apiFetch('/admin/gallery/images/order', {
+        method: 'PUT',
+        body: JSON.stringify({
+          categoryId,
+          imageIds: orderedImageIds
+        })
+      })
+    } catch (e) {
+      setError((e as Error).message)
+      await fetchGalleryImages()
+    }
+  }
+
+  const handleGalleryImageDrop = async (targetImageId: string) => {
+    if (!draggingGalleryImageId || draggingGalleryImageId === targetImageId) return
+    const dragged = galleryImages.find((img) => img.id === draggingGalleryImageId)
+    const target = galleryImages.find((img) => img.id === targetImageId)
+    if (!dragged || !target || dragged.categoryId !== target.categoryId) {
+      setDraggingGalleryImageId(null)
+      setGalleryDropTargetId(null)
+      return
+    }
+    const categoryImages = galleryImagesInCategorySorted(dragged.categoryId)
+    const from = categoryImages.findIndex((img) => img.id === draggingGalleryImageId)
+    const to = categoryImages.findIndex((img) => img.id === targetImageId)
+    if (from === -1 || to === -1 || from === to) {
+      setDraggingGalleryImageId(null)
+      setGalleryDropTargetId(null)
+      return
+    }
+    const next = [...categoryImages]
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
+    await reorderGalleryImagesInCategory(dragged.categoryId, next.map((img) => img.id))
   }
 
   const reorderTopics = async (fromIndex: number, toIndex: number) => {
@@ -1708,13 +1874,118 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
 
                             {block.type === 'text' ? (
                               <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => wrapSelectedTextInBlock(idx, '**', '**', 'bold text')}
+                                    className="px-2.5 py-1.5 rounded-lg border border-memorial-line text-xs font-bold text-memorial-ink hover:border-memorial-accent/60"
+                                    disabled={loading || !selectedTopicId}
+                                  >
+                                    Bold
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => wrapSelectedTextInBlock(idx, '*', '*', 'italic text')}
+                                    className="px-2.5 py-1.5 rounded-lg border border-memorial-line text-xs font-bold text-memorial-ink hover:border-memorial-accent/60"
+                                    disabled={loading || !selectedTopicId}
+                                  >
+                                    Italic
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      wrapSelectedTextInBlock(
+                                        idx,
+                                        '=={yellow|',
+                                        '}==',
+                                        'highlighted text'
+                                      )
+                                    }
+                                    className="px-2.5 py-1.5 rounded-lg border border-memorial-line text-xs font-bold text-memorial-ink hover:border-memorial-accent/60"
+                                    disabled={loading || !selectedTopicId}
+                                  >
+                                    Highlight (yellow)
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      wrapSelectedTextInBlock(
+                                        idx,
+                                        '=={green|',
+                                        '}==',
+                                        'highlighted text'
+                                      )
+                                    }
+                                    className="px-2.5 py-1.5 rounded-lg border border-memorial-line text-xs font-bold text-emerald-700 hover:border-emerald-400"
+                                    disabled={loading || !selectedTopicId}
+                                  >
+                                    Green
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      wrapSelectedTextInBlock(
+                                        idx,
+                                        '=={blue|',
+                                        '}==',
+                                        'highlighted text'
+                                      )
+                                    }
+                                    className="px-2.5 py-1.5 rounded-lg border border-memorial-line text-xs font-bold text-sky-700 hover:border-sky-400"
+                                    disabled={loading || !selectedTopicId}
+                                  >
+                                    Blue
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      wrapSelectedTextInBlock(
+                                        idx,
+                                        '=={pink|',
+                                        '}==',
+                                        'highlighted text'
+                                      )
+                                    }
+                                    className="px-2.5 py-1.5 rounded-lg border border-memorial-line text-xs font-bold text-pink-700 hover:border-pink-400"
+                                    disabled={loading || !selectedTopicId}
+                                  >
+                                    Pink
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => addHeadingToBlockLine(idx)}
+                                    className="px-2.5 py-1.5 rounded-lg border border-memorial-line text-xs font-bold text-memorial-ink hover:border-memorial-accent/60"
+                                    disabled={loading || !selectedTopicId}
+                                  >
+                                    Heading
+                                  </button>
+                                  <select
+                                    value={block.align ?? 'left'}
+                                    onChange={(e) =>
+                                      setTextBlockAlignment(idx, e.target.value as 'left' | 'center' | 'right')
+                                    }
+                                    className="px-2.5 py-1.5 rounded-lg border border-memorial-line text-xs font-bold text-memorial-ink bg-transparent outline-none"
+                                    disabled={loading || !selectedTopicId}
+                                  >
+                                    <option value="left">Align left</option>
+                                    <option value="center">Align center</option>
+                                    <option value="right">Align right</option>
+                                  </select>
+                                </div>
                                 <textarea
+                                  ref={(el) => {
+                                    textBlockRefs.current[idx] = el
+                                  }}
                                   value={block.value}
                                   onChange={(e) => {
                                     const value = e.target.value
                                     setTopicDraft((p) => {
                                       const next = [...p.blocks]
-                                      const cur = next[idx] as { type: 'text'; value: string }
+                                      const cur = next[idx] as {
+                                        type: 'text'
+                                        value: string
+                                        align?: 'left' | 'center' | 'right'
+                                      }
                                       next[idx] = { ...cur, value }
                                       return { ...p, blocks: next }
                                     })
@@ -1964,7 +2235,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                   </div>
                 </div>
                 <p className="text-xs text-memorial-muted mb-3">
-                  Uploaded images ({galleryImages.length}) are shown below across all categories so you can always verify what is already in the system.
+                  Drag and drop images below to reorder within the selected category.
                 </p>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
                   <div className="lg:col-span-2">
@@ -2034,6 +2305,42 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                   >
                     Delete checked images ({checkedGalleryImageIds.length})
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => void reorderSelectedGalleryImage(-1)}
+                    className="px-4 py-2 rounded-full border border-memorial-line text-memorial-muted font-bold hover:border-memorial-accent/60 transition-colors disabled:opacity-50"
+                    disabled={
+                      loading ||
+                      !selectedGalleryImageId ||
+                      (() => {
+                        const cat = galleryImages.find((x) => x.id === selectedGalleryImageId)?.categoryId
+                        if (!cat) return true
+                        const list = galleryImagesInCategorySorted(cat)
+                        const idx = list.findIndex((img) => img.id === selectedGalleryImageId)
+                        return idx <= 0
+                      })()
+                    }
+                  >
+                    Move selected image up
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void reorderSelectedGalleryImage(1)}
+                    className="px-4 py-2 rounded-full border border-memorial-line text-memorial-muted font-bold hover:border-memorial-accent/60 transition-colors disabled:opacity-50"
+                    disabled={
+                      loading ||
+                      !selectedGalleryImageId ||
+                      (() => {
+                        const cat = galleryImages.find((x) => x.id === selectedGalleryImageId)?.categoryId
+                        if (!cat) return true
+                        const list = galleryImagesInCategorySorted(cat)
+                        const idx = list.findIndex((img) => img.id === selectedGalleryImageId)
+                        return idx === -1 || idx === list.length - 1
+                      })()
+                    }
+                  >
+                    Move selected image down
+                  </button>
                 </div>
                 <div className="mb-4 flex gap-2">
                   <button
@@ -2057,14 +2364,53 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                     Move selected down
                   </button>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3 max-h-[65vh] overflow-y-auto pr-1">
-                  {galleryImages.map((img) => (
-                    <button
+                <div
+                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3 max-h-[65vh] overflow-y-auto pr-1"
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                  }}
+                >
+                  {galleryImagesInCategorySorted(selectedGalleryCategoryId).map((img) => (
+                    <div
                       key={img.id}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
+                      draggable={!loading}
+                      onDragStart={(e) => {
+                        e.dataTransfer.effectAllowed = 'move'
+                        e.dataTransfer.setData('text/plain', img.id)
+                        setDraggingGalleryImageId(img.id)
+                        setGalleryDropTargetId(img.id)
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        if (draggingGalleryImageId && draggingGalleryImageId !== img.id) {
+                          setGalleryDropTargetId(img.id)
+                        }
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        void handleGalleryImageDrop(img.id)
+                      }}
+                      onDragEnd={() => {
+                        setDraggingGalleryImageId(null)
+                        setGalleryDropTargetId(null)
+                      }}
                       onClick={() => setSelectedGalleryImageId(img.id)}
-                      className={`text-left rounded-xl overflow-hidden border bg-memorial-card/80 ${
-                        img.id === selectedGalleryImageId ? 'border-memorial-accent' : 'border-memorial-line'
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setSelectedGalleryImageId(img.id)
+                        }
+                      }}
+                      className={`text-left rounded-xl overflow-hidden border bg-memorial-card/80 cursor-grab active:cursor-grabbing select-none ${
+                        draggingGalleryImageId === img.id ? 'opacity-60' : ''
+                      } ${
+                        img.id === selectedGalleryImageId
+                          ? 'border-memorial-accent'
+                          : galleryDropTargetId === img.id && draggingGalleryImageId
+                            ? 'border-indigo-400'
+                            : 'border-memorial-line'
                       }`}
                     >
                       <div className="px-2 pt-2">
@@ -2091,10 +2437,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                       <div className="px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-memorial-muted border-t border-memorial-line/60 truncate">
                         {img.categoryName || 'Uncategorized'}
                       </div>
-                    </button>
+                      <div className="px-2 pb-2 text-[10px] text-memorial-muted truncate">
+                        {img.alt?.trim() || img.filename}
+                      </div>
+                    </div>
                   ))}
-                  {galleryImages.length === 0 ? (
-                    <div className="col-span-2 text-sm text-memorial-muted">No gallery images uploaded yet.</div>
+                  {galleryImagesInCategorySorted(selectedGalleryCategoryId).length === 0 ? (
+                    <div className="col-span-2 text-sm text-memorial-muted">
+                      No gallery images in this category yet.
+                    </div>
                   ) : null}
                 </div>
               </div>

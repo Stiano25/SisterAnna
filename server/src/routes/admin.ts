@@ -10,17 +10,26 @@ const router = express.Router()
 const upload = multer({ storage: multer.memoryStorage() })
 
 type ContentBlock =
-  | { type: 'text'; value: string }
+  | { type: 'text'; value: string; align?: 'left' | 'center' | 'right' }
   | { type: 'image'; imageId: string }
 
 function stripMarkdownLinks(input: string): string {
   return input.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
 }
 
+function stripStoryFormatting(input: string): string {
+  return stripMarkdownLinks(input)
+    .replace(/^#{1,3}\s+/gm, '')
+    .replace(/==\{(?:yellow|green|blue|pink)\|([^}]+)\}==/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/==([^=]+)==/g, '$1')
+}
+
 function computeSummaryText(blocks: ContentBlock[]) {
   const full = blocks
-    .filter((b): b is { type: 'text'; value: string } => b.type === 'text')
-    .map((b) => stripMarkdownLinks(b.value))
+    .filter((b): b is { type: 'text'; value: string; align?: 'left' | 'center' | 'right' } => b.type === 'text')
+    .map((b) => stripStoryFormatting(b.value))
     .join(' ')
     .trim()
 
@@ -43,7 +52,9 @@ function normalizeBlocks(raw: unknown): ContentBlock[] {
     if (!item || typeof item !== 'object') continue
     const obj = item as any
     if (obj.type === 'text' && typeof obj.value === 'string') {
-      blocks.push({ type: 'text', value: obj.value })
+      const align =
+        obj.align === 'center' || obj.align === 'right' || obj.align === 'left' ? obj.align : undefined
+      blocks.push({ type: 'text', value: obj.value, ...(align ? { align } : {}) })
     } else if (obj.type === 'image' && typeof obj.imageId === 'string') {
       blocks.push({ type: 'image', imageId: obj.imageId })
     }
@@ -687,6 +698,40 @@ router.put('/gallery/categories/order', async (req, res) => {
     await db.query('ROLLBACK')
     console.error(err)
     res.status(500).json({ error: 'Failed to reorder gallery categories' })
+  }
+})
+
+router.put('/gallery/images/order', async (req, res) => {
+  const { categoryId, imageIds } = req.body as { categoryId?: string; imageIds?: string[] }
+  if (typeof categoryId !== 'string' || !categoryId.trim()) {
+    res.status(400).json({ error: 'categoryId is required' })
+    return
+  }
+  if (!Array.isArray(imageIds) || imageIds.length === 0) {
+    res.status(400).json({ error: 'imageIds is required' })
+    return
+  }
+
+  const cat = categoryId.trim()
+  try {
+    await runInTransaction(async (client) => {
+      await client.query(
+        `
+        UPDATE gallery_images AS g
+        SET sortOrder = ord.sort_order
+        FROM (
+          SELECT u.id, (u.ord - 1)::int AS sort_order
+          FROM unnest($1::text[]) WITH ORDINALITY AS u(id, ord)
+        ) AS ord
+        WHERE g.id = ord.id AND COALESCE(g.categoryId, 'uncategorized') = $2
+        `,
+        [imageIds, cat]
+      )
+    })
+    res.json({ ok: true })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to reorder gallery images' })
   }
 })
 

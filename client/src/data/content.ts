@@ -54,8 +54,8 @@ export const quickLinks: QuickLink[] = [
   },
   {
     id: 'q3',
-    question: 'What is happening with her mission today?',
-    pageId: 'mission'
+    question: 'How can I support the family?',
+    pageId: 'family-project'
   },
   {
     id: 'q4',

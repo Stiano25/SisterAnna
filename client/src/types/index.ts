@@ -15,8 +15,11 @@ export interface ContentCard {
 }
 
 export type ContentBlock =
-  /** Text blocks support inline links: `[label](https://…)` (any safe https URL, mailto:, tel:). */
-  | { type: 'text'; value: string }
+  /**
+   * Text blocks support inline links and lightweight formatting:
+   * `[label](https://…)`, `**bold**`, `*italic*`, `==highlight==`, heading lines like `# Title`.
+   */
+  | { type: 'text'; value: string; align?: 'left' | 'center' | 'right' }
   | { type: 'image'; imageId: string }
 
 export interface Category {

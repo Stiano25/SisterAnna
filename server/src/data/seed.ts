@@ -40,7 +40,7 @@ export const quickLinks: QuickLink[] = [
   { id: 'q2', question: 'How did she receive the stigmata?', pageId: 'stigmata', cardId: 'stigmata-thursday' },
   { id: 'q3', question: 'What miracles happened at her funeral?', pageId: 'miracles', cardId: 'funeral-host' },
   { id: 'q4', question: 'What is her book about?', pageId: 'book', cardId: 'eucharist-book' },
-  { id: 'q5', question: 'How can I support her mission?', pageId: 'mission', cardId: 'canonization' }
+  { id: 'q5', question: 'How can I support the family?', pageId: 'family-project' }
 ]
 
 export const allContent: ContentCard[] = [
