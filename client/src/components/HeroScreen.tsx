@@ -76,7 +76,7 @@ const HeroScreen: React.FC<HeroScreenProps> = ({ onExplore }) => {
             Testimony Of Sister Anna Ali
           </p>
           <h1 className="mt-2.5 font-sans text-3xl sm:text-4xl md:text-5xl text-white leading-tight tracking-tight max-w-3xl mx-auto text-balance">
-            A Kenyan girl who experienced the wounds of Jesus on the cross
+            A Kenyan girl who experienced the wounds of Jesus Christ on the cross
           </h1>
         </motion.div>
 
