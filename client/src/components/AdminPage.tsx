@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, ChevronRight, LogOut, Plus, RotateCcw, Save, Trash2, Upload } from 'lucide-react'
+import { ArrowLeft, ArrowRightLeft, ChevronRight, LogOut, Plus, RotateCcw, Save, Trash2, Upload } from 'lucide-react'
 import type { Category, ContentBlock } from '../types'
 import LucideIconPicker from './LucideIconPicker'
 import CssColorInput from './CssColorInput'
@@ -230,12 +230,20 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     })
   }
 
-  const fetchTopics = async (categoryId: string, options?: { skipTopicSelection?: boolean }) => {
+  const fetchTopics = async (
+    categoryId: string,
+    options?: { skipTopicSelection?: boolean; selectTopicId?: string }
+  ) => {
     const res = await apiFetch(`/admin/categories/${categoryId}/topics`, { method: 'GET' })
     const data = (await res.json()) as AdminTopic[]
     setTopics(data)
     if (options?.skipTopicSelection) {
       setSelectedTopicId('')
+      return
+    }
+    if (options?.selectTopicId) {
+      const id = options.selectTopicId
+      setSelectedTopicId(data.some((t) => t.id === id) ? id : data[0]?.id ?? '')
       return
     }
     setSelectedTopicId((prev) => {
@@ -248,6 +256,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
     const res = await apiFetch(`/admin/topics/${topicId}`, { method: 'GET' })
     const data = (await res.json()) as { topic: AdminTopic | null; blocks: ContentBlock[]; images: AdminImage[] }
     if (!data.topic) return
+    if (data.topic.categoryId && data.topic.categoryId !== selectedCategoryId) {
+      setSelectedCategoryId(data.topic.categoryId)
+    }
     setImages(data.images)
     const firstImgId = data.images[0]?.id || ''
     const firstAlt = data.images[0]?.alt || ''
@@ -590,6 +601,64 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
       topicBaselineRef.current = null
       setSelectedTopicId('')
       await fetchTopics(selectedCategoryId)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const transferDestinationOptions = useMemo(
+    () => categories.filter((c) => c.id !== selectedCategoryId),
+    [categories, selectedCategoryId]
+  )
+
+  const [transferDestCategoryId, setTransferDestCategoryId] = useState('')
+  useEffect(() => {
+    setTransferDestCategoryId((prev) =>
+      transferDestinationOptions.some((c) => c.id === prev)
+        ? prev
+        : transferDestinationOptions[0]?.id ?? ''
+    )
+  }, [transferDestinationOptions])
+
+  const transferTopicToSection = async (destinationCategoryId: string) => {
+    if (!selectedTopicId || !destinationCategoryId || destinationCategoryId === selectedCategoryId) return
+    if (!confirmDiscardUnsavedStory()) return
+    const topicId = selectedTopicId
+    setError(null)
+    setLoading(true)
+    try {
+      const res = await apiFetch(`/admin/topics/${topicId}/category`, {
+        method: 'PUT',
+        body: JSON.stringify({ categoryId: destinationCategoryId })
+      })
+      const payload = (await res.json()) as { topic?: { categoryId?: string } }
+      const nextCategoryId = payload.topic?.categoryId || destinationCategoryId
+      setAdminStep('topics')
+      setSelectedCategoryId(nextCategoryId)
+      // The DB write is committed before response, but read paths can briefly lag on some setups.
+      // Retry destination list fetch so transferred story selection remains stable.
+      let lastTopics: AdminTopic[] = []
+      let found = false
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const listRes = await apiFetch(`/admin/categories/${nextCategoryId}/topics`, { method: 'GET' })
+        const list = (await listRes.json()) as AdminTopic[]
+        lastTopics = list
+        if (list.some((t) => t.id === topicId)) {
+          found = true
+          break
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250))
+      }
+      setTopics(lastTopics)
+      if (!found) {
+        setError('Story moved, but list refresh is delayed. Please reopen the destination section in a moment.')
+      }
+      setSelectedTopicId(found ? topicId : lastTopics[0]?.id ?? '')
+      if (found) {
+        await fetchTopic(topicId)
+      }
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -1646,6 +1715,52 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                       >
                         <Trash2 className="w-5 h-5 text-memorial-accent" strokeWidth={1.5} />
                         Delete
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-memorial-line bg-memorial-card/40 p-4">
+                    <div className="text-xs font-bold uppercase tracking-[0.08em] text-memorial-muted mb-2">
+                      Move whole story
+                    </div>
+                    <p className="text-xs text-memorial-muted mb-3 leading-relaxed">
+                      Transfer this story to another section. Content blocks and images stay attached; the story appears at
+                      the end of the destination list.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2 sm:items-center flex-wrap">
+                      <label className="sr-only" htmlFor="admin-transfer-section">
+                        Destination section
+                      </label>
+                      <select
+                        id="admin-transfer-section"
+                        value={transferDestCategoryId}
+                        onChange={(e) => setTransferDestCategoryId(e.target.value)}
+                        className="flex-1 min-w-[180px] bg-transparent border border-memorial-line rounded-xl px-3 py-2 text-sm text-memorial-ink outline-none"
+                        disabled={loading || !selectedTopicId || transferDestinationOptions.length === 0}
+                      >
+                        {transferDestinationOptions.length === 0 ? (
+                          <option value="">No other section</option>
+                        ) : (
+                          transferDestinationOptions.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.label}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => void transferTopicToSection(transferDestCategoryId)}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-memorial-line bg-memorial-card font-bold text-sm text-memorial-ink hover:border-memorial-accent/60 transition-colors disabled:opacity-50"
+                        disabled={
+                          loading ||
+                          !selectedTopicId ||
+                          !transferDestCategoryId ||
+                          transferDestinationOptions.length === 0
+                        }
+                      >
+                        <ArrowRightLeft className="w-4 h-4 text-memorial-accent" strokeWidth={1.5} />
+                        Transfer
                       </button>
                     </div>
                   </div>

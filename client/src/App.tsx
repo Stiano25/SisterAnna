@@ -13,24 +13,24 @@ const GalleryPage = lazy(() => import('./components/GalleryPage'))
 
 const pageSeo: Record<string, { title: string; description: string; noindex?: boolean }> = {
   home: {
-    title: 'Sister Anna Ali Legacy | Faith, Biography, and Resurrection Hope',
+    title: 'Sister Anna Ali (Anna Hadija Ali) | Official Family Website',
     description:
-      "Explore Sister Anna Ali's legacy, family testimony, and Christian reflections on Jesus after resurrection."
+      'Official family website for Sister Anna Ali (Anna Hadija Ali, Sr Anna Ali): biography, faith testimony, mission updates, and verified memorial information.'
   },
   life: {
-    title: 'Sister Anna Ali Personal Life | Childhood and Vocation Journey',
+    title: 'Anna Hadija Ali (Sister Anna Ali) Personal Life | Official Biography',
     description:
-      "Discover the personal life of Sister Anna Ali, including early faith formation, family background, and her path to religious vocation."
+      'Discover the official family biography of Anna Hadija Ali (Sister Anna Ali), including early life, conversion, vocation, and legacy.'
   },
   visions: {
-    title: "Sister Anna Ali's Visions of Jesus | Divine Encounters",
+    title: "Sr Anna Ali Visions of Jesus | Sister Anna Ali Testimony",
     description:
-      'Learn about reported visions of Jesus connected to Sister Anna Ali and the faith messages preserved in memorial testimony.'
+      'Learn about the testimony of Sr Anna Ali (Sister Anna Ali), including reported visions of Jesus and Eucharistic messages preserved by her family.'
   },
   mission: {
-    title: 'Sister Anna Ali Missions | Works of Mercy and Ongoing Outreach',
+    title: 'Sister Anna Ali Mission | Official Family Outreach and Mercy Works',
     description:
-      'Follow the ongoing mission inspired by Sister Anna Ali through service, mercy projects, and community faith initiatives.'
+      'Follow official family mission updates inspired by Sister Anna Ali (Anna Ali), including mercy projects, events, and community faith outreach.'
   },
   gallery: {
     title: 'Sister Anna Ali Gallery | Photos and Memorial Moments',

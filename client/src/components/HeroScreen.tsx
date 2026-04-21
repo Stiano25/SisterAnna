@@ -73,16 +73,27 @@ const HeroScreen: React.FC<HeroScreenProps> = ({ onExplore }) => {
 
         <motion.div className="text-center mb-3 shrink-0" variants={itemVariants}>
           <p className="text-xs md:text-sm text-slate-200/85 tracking-[0.14em] uppercase font-semibold">
-            Testimony Of Sister Anna Ali
+            Official Family Website Of Sister Anna Ali
           </p>
           <h1 className="mt-2.5 font-sans text-3xl sm:text-4xl md:text-5xl text-white leading-tight tracking-tight max-w-3xl mx-auto text-balance">
-            A Kenyan girl who experienced the wounds of Jesus Christ on the cross
+            Sister Anna Ali (Anna Hadija Ali), also known as Sr Anna Ali
           </h1>
         </motion.div>
 
         <motion.div className="text-center mb-2 shrink-0" variants={itemVariants}>
           <p className="text-[11px] text-slate-200/80 tracking-[0.12em] uppercase font-semibold">
             29 Dec 1966 – 6 Jun 2012
+          </p>
+        </motion.div>
+
+        <motion.div className="text-center mb-4 px-2 sm:px-6 shrink-0" variants={itemVariants}>
+          <p className="font-sans text-xs sm:text-sm text-slate-200/90 leading-relaxed max-w-2xl mx-auto text-balance">
+            The official family source for Sister Anna Ali, also known as Anna Hadija Ali, Anna Ali, and Sr Anna Ali.
+          </p>
+        </motion.div>
+        <motion.div className="text-center mb-3 px-2 sm:px-6 shrink-0" variants={itemVariants}>
+          <p className="font-sans text-[11px] sm:text-xs text-slate-200/85 leading-relaxed max-w-3xl mx-auto text-balance">
+            Family verification contributors: Mariam Ali, Caroline Asha Ali, Abdul Ali, Antony Hamisi, and Prisca Nyambura.
           </p>
         </motion.div>
 

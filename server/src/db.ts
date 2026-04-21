@@ -149,11 +149,10 @@ SELECT 1;
 
 const REQUIRED_APP_CATEGORIES = [
   { id: 'life', label: 'Personal life', sublabel: 'Her journey', iconName: 'Cross', sortOrder: 0 },
-  { id: 'mission', label: 'Missions', sublabel: 'Ongoing work', iconName: 'Compass', sortOrder: 1 },
-  { id: 'visions', label: 'Visions', sublabel: 'Divine encounters', iconName: 'Eye', sortOrder: 2 },
-  { id: 'gallery', label: 'Gallery', sublabel: 'Photographs', iconName: 'Image', sortOrder: 3 },
-  { id: 'videos', label: 'Videos', sublabel: 'Watch testimonies', iconName: 'Video', sortOrder: 4 },
-  { id: 'events', label: 'Events', sublabel: 'Gatherings and dates', iconName: 'Calendar', sortOrder: 5 }
+  { id: 'visions', label: 'Visions', sublabel: 'Divine encounters', iconName: 'Eye', sortOrder: 1 },
+  { id: 'gallery', label: 'Gallery', sublabel: 'Photographs', iconName: 'Image', sortOrder: 2 },
+  { id: 'videos', label: 'Videos', sublabel: 'Watch testimonies', iconName: 'Video', sortOrder: 3 },
+  { id: 'events', label: 'Events', sublabel: 'Gatherings and dates', iconName: 'Calendar', sortOrder: 4 }
 ]
 
 export async function initDb() {

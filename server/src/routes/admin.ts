@@ -445,6 +445,80 @@ router.get('/topics/:topicId', async (req, res) => {
   }
 })
 
+router.put('/topics/:topicId/category', async (req, res) => {
+  const { topicId } = req.params
+  const { categoryId: destinationCategoryId } = req.body as { categoryId?: string }
+
+  const dest = destinationCategoryId?.trim()
+  if (!dest) {
+    res.status(400).json({ error: 'categoryId is required' })
+    return
+  }
+
+  try {
+    const topicRes = await db.query<{ categoryId: string }>(
+      `SELECT categoryId AS "categoryId" FROM topics WHERE id=$1`,
+      [topicId]
+    )
+    const currentCategoryId = topicRes.rows[0]?.categoryId
+    if (!currentCategoryId) {
+      res.status(404).json({ error: 'Story not found' })
+      return
+    }
+    if (currentCategoryId === dest) {
+      res.status(400).json({ error: 'Story is already in this section' })
+      return
+    }
+
+    const catCheck = await db.query(`SELECT 1 FROM categories WHERE id=$1`, [dest])
+    if (catCheck.rowCount === 0) {
+      res.status(404).json({ error: 'Destination section not found' })
+      return
+    }
+
+    const result = await runInTransaction(async (client) => {
+      const orderRes = await client.query<{ m: string }>(
+        `SELECT COALESCE(MAX(sortOrder), -1)::text AS m FROM topics WHERE categoryId=$1`,
+        [dest]
+      )
+      const sortOrder = Number(orderRes.rows[0]?.m ?? -1) + 1
+
+      // Some older rows may not have a blocks row; ensure transfer can't make them disappear
+      // from public content queries that join on topic_content_blocks.
+      await client.query(
+        `
+        INSERT INTO topic_content_blocks (topicId, blocks)
+        VALUES ($1, '[]'::jsonb)
+        ON CONFLICT (topicId) DO NOTHING
+        `,
+        [topicId]
+      )
+
+      const updateRes = await client.query(
+        `
+        UPDATE topics
+        SET categoryId=$1, sortOrder=$2, updatedAt=NOW()
+        WHERE id=$3
+        RETURNING id, categoryId, eyebrow, title, tag, sortOrder, summaryText, mission_status, support_link, updatedAt
+        , video_url, event_date, recording_url, thumbnail_image_id
+        `,
+        [dest, sortOrder, topicId]
+      )
+
+      return updateRes.rows[0]
+    })
+
+    res.json({ ok: true, topic: result })
+  } catch (err) {
+    console.error(err)
+    if (isUnreachableDbError(err)) {
+      res.status(503).json({ error: 'Neon DB temporarily unavailable (timeout). Please try again.' })
+      return
+    }
+    res.status(500).json({ error: 'Failed to transfer story' })
+  }
+})
+
 router.put('/topics/:topicId', async (req, res) => {
   const { topicId } = req.params
   const { eyebrow, title, tag, blocks, missionStatus, supportLink, videoUrl, eventDate, recordingUrl, thumbnailImageId } = req.body as {
@@ -464,7 +538,10 @@ router.put('/topics/:topicId', async (req, res) => {
   const summaryText = computeSummaryText(normalizedBlocks)
 
   try {
-    const catRes = await db.query<{ categoryId: string }>(`SELECT categoryId FROM topics WHERE id=$1`, [topicId])
+    const catRes = await db.query<{ categoryId: string }>(
+      `SELECT categoryId AS "categoryId" FROM topics WHERE id=$1`,
+      [topicId]
+    )
     const categoryId = catRes.rows[0]?.categoryId
     const isMission = categoryId === 'mission'
 
