@@ -76,6 +76,14 @@ export const useNavigation = () => {
       setStack(prev => prev.slice(0, -1))
       const nextPage = stack[stack.length - 2]
       syncUrlForPage(nextPage)
+      return
+    }
+    // When a user lands directly on a deep URL (e.g. /life),
+    // there is no in-app history stack to pop. Fall back to home.
+    if (stack[0] !== 'home') {
+      setDirection('back')
+      setStack(['home'])
+      syncUrlForPage('home')
     }
   }, [stack])
 

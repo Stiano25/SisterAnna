@@ -43,9 +43,9 @@ const pageSeo: Record<string, { title: string; description: string; noindex?: bo
       'Watch testimonies, reflections, and documentary-style video content about Sister Anna Ali and her legacy.'
   },
   events: {
-    title: 'Sister Anna Ali Events | Gatherings, Memorials, and Dates',
+    title: 'Sister Anna Ali Memorial Events | Official Family Gatherings and Dates',
     description:
-      'Find upcoming events, remembrance gatherings, and important dates connected to Sister Anna Ali.'
+      'Find official memorial events, remembrance gatherings, and important dates from the family of Sister Anna Ali.'
   },
   search: {
     title: 'Search Sister Anna Ali Content | Topics, Visions, Missions',
