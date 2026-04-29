@@ -1,12 +1,18 @@
-import dotenv from 'dotenv'
-import path from 'path'
-import { Pool } from 'pg'
-import { categories as seedCategories, allContent as seedTopics, missionCards as seedMissionCards } from './data/seed.js'
-import { randomUUID } from 'crypto'
+import dotenv from "dotenv"
+import path from "path"
+import { Pool } from "pg"
+import {
+    categories as seedCategories,
+    allContent as seedTopics,
+    missionCards as seedMissionCards
+} from "./data/seed.js"
+import { randomUUID } from "crypto"
 
 // Ensure env vars are loaded even if this module initializes before `index.ts`.
-dotenv.config({ path: path.resolve(process.cwd(), '.env') })
-dotenv.config({ path: path.resolve(process.cwd(), '..', '.env') })
+dotenv.config({ path: path.resolve(process.cwd(), ".env") })
+dotenv.config({
+    path: path.resolve(process.cwd(), "..", ".env")
+})
 
 const DATABASE_URL = process.env.NEON_DATABASE_URL
 
@@ -14,40 +20,62 @@ const DATABASE_URL = process.env.NEON_DATABASE_URL
 export let dbEnabled = Boolean(DATABASE_URL)
 
 function createPool(): Pool | null {
-  if (!DATABASE_URL) return null
-  return new Pool({
-    connectionString: DATABASE_URL,
-    ssl: DATABASE_URL.includes('neon.tech') ? { rejectUnauthorized: false } : undefined,
-    connectionTimeoutMillis: 15_000
-  })
+    if (!DATABASE_URL) return null
+    return new Pool({
+        connectionString: DATABASE_URL,
+        ssl: DATABASE_URL.includes("neon.tech")
+            ? { rejectUnauthorized: false }
+            : undefined,
+        connectionTimeoutMillis: 15_000
+    })
 }
 
 export let pool: Pool | null = createPool()
 
 function isUnreachableDbError(err: unknown): boolean {
-  const e = err as { code?: string; errors?: Array<{ code?: string }> }
-  if (e?.code === 'ETIMEDOUT' || e?.code === 'ECONNREFUSED' || e?.code === 'ENOTFOUND') return true
-  if (Array.isArray(e?.errors)) {
-    return e.errors.some((x) => x?.code === 'ETIMEDOUT' || x?.code === 'ECONNREFUSED')
-  }
-  return false
+    const e = err as {
+        code?: string
+        errors?: Array<{ code?: string }>
+    }
+    if (
+        e?.code === "ETIMEDOUT" ||
+        e?.code === "ECONNREFUSED" ||
+        e?.code === "ENOTFOUND"
+    )
+        return true
+    if (Array.isArray(e?.errors)) {
+        return e.errors.some(
+            x =>
+                x?.code === "ETIMEDOUT" ||
+                x?.code === "ECONNREFUSED"
+        )
+    }
+    return false
 }
 
 type ContentBlock =
-  | { type: 'text'; value: string; align?: 'left' | 'center' | 'right' }
-  | { type: 'image'; imageId: string }
+    | {
+          type: "text"
+          value: string
+          align?: "left" | "center" | "right"
+      }
+    | { type: "image"; imageId: string }
 
-const computeBlocksFromBody = (body: string): ContentBlock[] => [{ type: 'text', value: body }]
+const computeBlocksFromBody = (
+    body: string
+): ContentBlock[] => [{ type: "text", value: body }]
 
 const computeSummaryFromBody = (body: string): string => {
-  const text = body.trim()
-  if (!text) return ''
-  const maxLen = 180
-  if (text.length <= maxLen) return text
-  const slice = text.slice(0, maxLen)
-  const lastSpace = slice.lastIndexOf(' ')
-  const trimmed = (lastSpace > 40 ? slice.slice(0, lastSpace) : slice).trimEnd()
-  return `${trimmed}…`
+    const text = body.trim()
+    if (!text) return ""
+    const maxLen = 180
+    if (text.length <= maxLen) return text
+    const slice = text.slice(0, maxLen)
+    const lastSpace = slice.lastIndexOf(" ")
+    const trimmed = (
+        lastSpace > 40 ? slice.slice(0, lastSpace) : slice
+    ).trimEnd()
+    return `${trimmed}…`
 }
 
 const initSql = `
@@ -110,6 +138,21 @@ CREATE TABLE IF NOT EXISTS admin_users (
   createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS donations (
+  id TEXT PRIMARY KEY,
+  tx_ref TEXT NOT NULL,
+  transaction_id BIGINT NOT NULL UNIQUE,
+  amount NUMERIC(12, 2) NOT NULL,
+  currency TEXT NOT NULL,
+  status TEXT NOT NULL,
+  payment_method TEXT,
+  customer_name TEXT,
+  customer_email TEXT,
+  customer_phone TEXT,
+  raw_payload JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 ALTER TABLE topics ADD COLUMN IF NOT EXISTS mission_status TEXT;
 ALTER TABLE topics ADD COLUMN IF NOT EXISTS support_link TEXT;
 ALTER TABLE topics ADD COLUMN IF NOT EXISTS video_url TEXT;
@@ -148,103 +191,155 @@ SELECT 1;
 `
 
 const REQUIRED_APP_CATEGORIES = [
-  { id: 'life', label: 'Personal life', sublabel: 'Her journey', iconName: 'Cross', sortOrder: 0 },
-  { id: 'visions', label: 'Visions', sublabel: 'Divine encounters', iconName: 'Eye', sortOrder: 1 },
-  { id: 'gallery', label: 'Gallery', sublabel: 'Photographs', iconName: 'Image', sortOrder: 2 },
-  { id: 'videos', label: 'Videos', sublabel: 'Watch testimonies', iconName: 'Video', sortOrder: 3 },
-  { id: 'events', label: 'Events', sublabel: 'Gatherings and dates', iconName: 'Calendar', sortOrder: 4 }
+    {
+        id: "life",
+        label: "Personal life",
+        sublabel: "Her journey",
+        iconName: "Cross",
+        sortOrder: 0
+    },
+    {
+        id: "visions",
+        label: "Visions",
+        sublabel: "Divine encounters",
+        iconName: "Eye",
+        sortOrder: 1
+    },
+    {
+        id: "gallery",
+        label: "Gallery",
+        sublabel: "Photographs",
+        iconName: "Image",
+        sortOrder: 2
+    },
+    {
+        id: "videos",
+        label: "Videos",
+        sublabel: "Watch testimonies",
+        iconName: "Video",
+        sortOrder: 3
+    },
+    {
+        id: "events",
+        label: "Events",
+        sublabel: "Gatherings and dates",
+        iconName: "Calendar",
+        sortOrder: 4
+    }
 ]
 
 export async function initDb() {
-  if (!pool) return false
+    if (!pool) return false
 
-  try {
-    await pool.query(initSql)
+    try {
+        await pool.query(initSql)
 
-    // Seed only if categories table is empty.
-    const categoriesCount = await pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM categories')
+        // Seed only if categories table is empty.
+        const categoriesCount = await pool.query<{
+            count: string
+        }>("SELECT COUNT(*)::text AS count FROM categories")
 
-    if (categoriesCount.rows[0]?.count === '0') {
-      await Promise.all(
-        seedCategories.map(async (cat, idx) => {
-          await pool!.query(
-            'INSERT INTO categories (id, label, sublabel, iconName, sortOrder) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING',
-            [cat.id, cat.label, cat.sublabel, cat.iconName, idx]
-          )
-        })
-      )
+        if (categoriesCount.rows[0]?.count === "0") {
+            await Promise.all(
+                seedCategories.map(async (cat, idx) => {
+                    await pool!.query(
+                        "INSERT INTO categories (id, label, sublabel, iconName, sortOrder) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING",
+                        [
+                            cat.id,
+                            cat.label,
+                            cat.sublabel,
+                            cat.iconName,
+                            idx
+                        ]
+                    )
+                })
+            )
 
-      // Seed story topics (image blocks start empty).
-      await Promise.all(
-        seedTopics.map(async (t, idx) => {
-          const blocks = computeBlocksFromBody(t.body)
-          const summary = computeSummaryFromBody(t.body)
-          await pool!.query(seedSql, [
-            t.id,
-            t.pageId,
-            t.eyebrow,
-            t.title,
-            t.tag,
-            idx,
-            summary,
-            null,
-            null,
-            JSON.stringify(blocks)
-          ])
-        })
-      )
+            // Seed story topics (image blocks start empty).
+            await Promise.all(
+                seedTopics.map(async (t, idx) => {
+                    const blocks = computeBlocksFromBody(
+                        t.body
+                    )
+                    const summary = computeSummaryFromBody(
+                        t.body
+                    )
+                    await pool!.query(seedSql, [
+                        t.id,
+                        t.pageId,
+                        t.eyebrow,
+                        t.title,
+                        t.tag,
+                        idx,
+                        summary,
+                        null,
+                        null,
+                        JSON.stringify(blocks)
+                    ])
+                })
+            )
 
-      await Promise.all(
-        seedMissionCards.map(async (t, idx) => {
-          const blocks = computeBlocksFromBody(t.body)
-          const summary = computeSummaryFromBody(t.body)
-          await pool!.query(seedSql, [
-            t.id,
-            t.pageId,
-            t.eyebrow,
-            t.title,
-            t.tag,
-            idx,
-            summary,
-            t.status,
-            t.supportLink ?? null,
-            JSON.stringify(blocks)
-          ])
-        })
-      )
-    }
+            await Promise.all(
+                seedMissionCards.map(async (t, idx) => {
+                    const blocks = computeBlocksFromBody(
+                        t.body
+                    )
+                    const summary = computeSummaryFromBody(
+                        t.body
+                    )
+                    await pool!.query(seedSql, [
+                        t.id,
+                        t.pageId,
+                        t.eyebrow,
+                        t.title,
+                        t.tag,
+                        idx,
+                        summary,
+                        t.status,
+                        t.supportLink ?? null,
+                        JSON.stringify(blocks)
+                    ])
+                })
+            )
+        }
 
-    // Ensure core app categories exist for older DBs; do not overwrite admin edits (DO NOTHING on conflict).
-    await Promise.all(
-      REQUIRED_APP_CATEGORIES.map(async (cat) => {
-        await pool!.query(
-          `
+        // Ensure core app categories exist for older DBs; do not overwrite admin edits (DO NOTHING on conflict).
+        await Promise.all(
+            REQUIRED_APP_CATEGORIES.map(async cat => {
+                await pool!.query(
+                    `
           INSERT INTO categories (id, label, sublabel, iconName, sortOrder)
           VALUES ($1, $2, $3, $4, $5)
           ON CONFLICT (id) DO NOTHING
           `,
-          [cat.id, cat.label, cat.sublabel, cat.iconName, cat.sortOrder]
+                    [
+                        cat.id,
+                        cat.label,
+                        cat.sublabel,
+                        cat.iconName,
+                        cat.sortOrder
+                    ]
+                )
+            })
         )
-      })
-    )
 
-    // Ensure gallery categories exist and existing images are assigned.
-    await pool.query(
-      `
+        // Ensure gallery categories exist and existing images are assigned.
+        await pool.query(
+            `
       INSERT INTO gallery_categories (id, name, sortOrder)
       VALUES ('general', 'General', 0)
       ON CONFLICT (id) DO NOTHING
       `
-    )
-    await pool.query(
-      `
+        )
+        await pool.query(
+            `
       UPDATE gallery_images
       SET categoryId = 'general'
       WHERE categoryId IS NULL OR categoryId = ''
       `
-    )
-    await pool.query(
-      `
+        )
+        await pool.query(
+            `
       DO $$
       BEGIN
         IF NOT EXISTS (
@@ -259,45 +354,54 @@ export async function initDb() {
         END IF;
       END $$;
       `
-    )
+        )
 
-    // Ensure at least one admin user exists in DB.
-    const adminCount = await pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM admin_users')
-    if (adminCount.rows[0]?.count === '0') {
-      const defaultEmail = process.env.ADMIN_EMAIL || 'CTRLRoom369@gmail.com'
-      const defaultPassword = process.env.ADMIN_PASSWORD || 'CTRLRoom@369'
-      await pool.query(
-        `
+        // Ensure at least one admin user exists in DB.
+        const adminCount = await pool.query<{
+            count: string
+        }>(
+            "SELECT COUNT(*)::text AS count FROM admin_users"
+        )
+        if (adminCount.rows[0]?.count === "0") {
+            const defaultEmail =
+                process.env.ADMIN_EMAIL ||
+                "CTRLRoom369@gmail.com"
+            const defaultPassword =
+                process.env.ADMIN_PASSWORD || "CTRLRoom@369"
+            await pool.query(
+                `
       INSERT INTO admin_users (email, password)
       VALUES ($1, $2)
       ON CONFLICT (email) DO NOTHING
       `,
-        [defaultEmail, defaultPassword]
-      )
-    }
+                [defaultEmail, defaultPassword]
+            )
+        }
 
-    // Touch images table (no-op) so schema is confirmed.
-    await pool.query(seedImagesSql)
-    return true
-  } catch (err) {
-    console.error('Database initialization failed:', err)
-    if (isUnreachableDbError(err)) {
-      console.error(
-        'Could not reach PostgreSQL (timeout or refused). The API will use in-memory seed data until the database is reachable. Check: VPN/firewall, Neon project status, IP allowlist, and NEON_DATABASE_URL in .env.'
-      )
+        // Touch images table (no-op) so schema is confirmed.
+        await pool.query(seedImagesSql)
+        return true
+    } catch (err) {
+        console.error(
+            "Database initialization failed:",
+            err
+        )
+        if (isUnreachableDbError(err)) {
+            console.error(
+                "Could not reach PostgreSQL (timeout or refused). The API will use in-memory seed data until the database is reachable. Check: VPN/firewall, Neon project status, IP allowlist, and NEON_DATABASE_URL in .env."
+            )
+        }
+        try {
+            await pool.end()
+        } catch {
+            /* ignore */
+        }
+        pool = null
+        dbEnabled = false
+        return false
     }
-    try {
-      await pool.end()
-    } catch {
-      /* ignore */
-    }
-    pool = null
-    dbEnabled = false
-    return false
-  }
 }
 
 export function createId(prefix: string) {
-  return `${prefix}_${randomUUID()}`
+    return `${prefix}_${randomUUID()}`
 }
-

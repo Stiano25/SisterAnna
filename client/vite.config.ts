@@ -11,6 +11,9 @@ export default defineConfig({
     }
   },
   server: {
+    // Allow all host headers so ngrok tunnels (used for Flutterwave
+    // redirect URLs in local dev) can serve the React app correctly.
+    allowedHosts: true,
     proxy: {
       '/api': 'http://localhost:3001'
     }
