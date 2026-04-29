@@ -6,7 +6,6 @@ import { pool, dbEnabled } from "../db.js"
 
 const router = express.Router()
 
-// Ensure env vars are loaded even if this module initializes before app.ts config.
 dotenv.config({ path: path.resolve(process.cwd(), ".env") })
 dotenv.config({
     path: path.resolve(process.cwd(), "..", ".env")
@@ -15,9 +14,6 @@ dotenv.config({
 const FLW_SECRET_KEY = process.env.FLW_SECRET_KEY
 const FLW_WEBHOOK_SECRET = process.env.FLW_WEBHOOK_SECRET
 const PUBLIC_SITE_URL = process.env.PUBLIC_SITE_URL
-// Optional: override the Flutterwave redirect URL independently of PUBLIC_SITE_URL.
-// Useful locally when ngrok exposes the server but the frontend runs on localhost.
-// Example: FLW_REDIRECT_URL="https://xxxx.ngrok-free.app"
 const FLW_REDIRECT_URL =
     process.env.FLW_REDIRECT_URL || PUBLIC_SITE_URL
 
