@@ -103,6 +103,7 @@ function App() {
             params.get("transactionId")
         if (!transactionId) return
 
+
         const urlStatus = params.get("status") ?? ""
         const flwSaysSuccess =
             urlStatus.toLowerCase() === "successful"
@@ -124,10 +125,7 @@ function App() {
                 message: "Verifying your donation..."
             })
         }
-
-        // Always call the verify endpoint for DB persistence regardless of
-        // what the URL status says. The result only updates the banner when
-        // the URL status was not already "successful".
+        
         fetch(
             `/api/donations/verify?transactionId=${encodeURIComponent(transactionId)}`
         )
