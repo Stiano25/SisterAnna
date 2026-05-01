@@ -4,7 +4,6 @@ import { X, Search } from "lucide-react"
 import CategoryGrid from "./CategoryGrid"
 import QuickLinks from "./QuickLinks"
 import SearchResults from "./SearchResults"
-import DonationLauncher from "./DonationLauncher"
 import {
     categories as fallbackCategories,
     quickLinks as fallbackQuickLinks
@@ -88,7 +87,6 @@ const ExplorerOverlay: React.FC<ExplorerOverlayProps> = ({
                         Sister Anna Ali
                     </h2>
                     <div className="flex items-center gap-3">
-                        <DonationLauncher />
                         <motion.button
                             onClick={onClose}
                             className="p-3 rounded-full hover:bg-slate-100 spiritual-depth transition-colors min-h-[48px] min-w-[48px] flex items-center justify-center text-indigo-600"

@@ -11,7 +11,7 @@ export default defineConfig({
     }
   },
   server: {
-    // Allow all host headers so ngrok tunnels (used for Flutterwave
+    // Allow all host headers so ngrok tunnels (used for payment
     // redirect URLs in local dev) can serve the React app correctly.
     allowedHosts: true,
     proxy: {

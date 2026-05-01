@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from "react"
+import { Suspense, lazy } from "react"
 import { AnimatePresence } from "framer-motion"
 import { Helmet } from "react-helmet-async"
 import { useNavigation } from "./hooks/useNavigation"
@@ -6,8 +6,6 @@ import HeroScreen from "./components/HeroScreen"
 import ExplorerOverlay from "./components/ExplorerOverlay"
 import AdminPage from "./components/AdminPage"
 import PageLoader from "./components/PageLoader"
-import DonationStatusBanner from "./components/DonationStatusBanner"
-import DonationFloating from "./components/DonationFloating"
 
 const SubPage = lazy(() => import("./components/SubPage"))
 const MissionPage = lazy(
@@ -76,10 +74,6 @@ const pageSeo: Record<
 function App() {
     const { currentPage, direction, goTo, goBack, reset } =
         useNavigation()
-    const [donationStatus, setDonationStatus] = useState<{
-        status: "verifying" | "successful" | "failed"
-        message: string
-    } | null>(null)
     const seo = pageSeo[currentPage] ?? pageSeo.home
     const canonicalPath =
         currentPage === "home"
@@ -93,97 +87,6 @@ function App() {
     const robotsValue = seo.noindex
         ? "noindex, nofollow"
         : "index, follow"
-
-    useEffect(() => {
-        const params = new URLSearchParams(
-            window.location.search
-        )
-        const transactionId =
-            params.get("transaction_id") ||
-            params.get("transactionId")
-        if (!transactionId) return
-
-
-        const urlStatus = params.get("status") ?? ""
-        const flwSaysSuccess =
-            urlStatus.toLowerCase() === "successful"
-
-        if (flwSaysSuccess) {
-            setDonationStatus({
-                status: "successful",
-                message:
-                    "Thank you! Your donation was received successfully."
-            })
-            window.history.replaceState(
-                {},
-                "",
-                "/"
-            )
-        } else {
-            setDonationStatus({
-                status: "verifying",
-                message: "Verifying your donation..."
-            })
-        }
-        
-        fetch(
-            `/api/donations/verify?transactionId=${encodeURIComponent(transactionId)}`
-        )
-            .then(async res => {
-                const data = await res
-                    .json()
-                    .catch(() => ({}))
-                if (!res.ok)
-                    throw new Error(
-                        data?.error || "Verification failed"
-                    )
-                return data as { status?: string }
-            })
-            .then(data => {
-                if (flwSaysSuccess) return // banner already set to success
-                if (data.status === "successful") {
-                    setDonationStatus({
-                        status: "successful",
-                        message:
-                            "Thank you! Your donation was received successfully."
-                    })
-                } else {
-                    setDonationStatus({
-                        status: "failed",
-                        message:
-                            "We could not confirm your donation. Please try again or contact support."
-                    })
-                }
-            })
-            .catch(() => {
-                if (flwSaysSuccess) return // banner already set to success
-                setDonationStatus({
-                    status: "failed",
-                    message:
-                        "We could not verify your donation yet. Please try again later."
-                })
-            })
-            .finally(() => {
-                if (!flwSaysSuccess) {
-                    window.history.replaceState(
-                        {},
-                        "",
-                        window.location.pathname
-                    )
-                }
-            })
-    }, [])
-
-    useEffect(() => {
-        if (!donationStatus) return
-        if (donationStatus.status === "verifying") return
-        const timerId = window.setTimeout(() => {
-            setDonationStatus(null)
-        }, 5000)
-        return () => {
-            window.clearTimeout(timerId)
-        }
-    }, [donationStatus])
 
     const renderPage = () => {
         switch (currentPage) {
@@ -240,14 +143,6 @@ function App() {
 
     return (
         <div className="min-h-screen bg-memorial spiritual-root">
-            {donationStatus ? (
-                <DonationStatusBanner
-                    status={donationStatus.status}
-                    message={donationStatus.message}
-                    onClose={() => setDonationStatus(null)}
-                />
-            ) : null}
-            <DonationFloating />
             <Helmet>
                 <title>{seo.title}</title>
                 <meta

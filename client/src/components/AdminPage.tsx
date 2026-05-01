@@ -78,25 +78,7 @@ const applyGalleryImageOrder = (
         return { ...img, sortOrder: pos }
     })
 
-type AdminStep =
-    | "category"
-    | "topics"
-    | "gallery"
-    | "donations"
-
-type AdminDonation = {
-    id: string
-    tx_ref: string
-    transaction_id: number
-    amount: number
-    currency: string
-    status: string
-    payment_method?: string | null
-    customer_name?: string | null
-    customer_email?: string | null
-    customer_phone?: string | null
-    created_at: string
-}
+type AdminStep = "category" | "topics" | "gallery"
 
 interface AdminPageProps {
     onBack: () => void
@@ -125,19 +107,10 @@ type TopicBaseline = {
 const FieldHint: React.FC<{
     children: React.ReactNode
 }> = ({ children }) => (
-    <p className="text-xs text-memorial-muted leading-relaxed mt-1">
+    <p className="mt-1 text-xs leading-relaxed text-memorial-muted">
         {children}
     </p>
 )
-
-const normalizeDonorEmail = (email?: string | null) => {
-    if (!email) return "-"
-    if (!email.includes("@")) return email
-    const lastUnderscore = email.lastIndexOf("_")
-    if (lastUnderscore <= 0) return email
-    const candidate = email.slice(lastUnderscore + 1)
-    return candidate.includes("@") ? candidate : email
-}
 
 const AdminPage: React.FC<AdminPageProps> = ({
     onBack
@@ -205,9 +178,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
     >([])
     const [galleryCategories, setGalleryCategories] =
         useState<AdminGalleryCategory[]>([])
-    const [donations, setDonations] = useState<
-        AdminDonation[]
-    >([])
     const [
         selectedGalleryCategoryId,
         setSelectedGalleryCategoryId
@@ -443,14 +413,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
         setCategoryDraft(cat ?? {})
     }
 
-    const fetchDonations = async () => {
-        const res = await apiFetch("/admin/donations", {
-            method: "GET"
-        })
-        const data = (await res.json()) as AdminDonation[]
-        setDonations(data)
-    }
-
     useEffect(() => {
         if (!authToken) return
         void (async () => {
@@ -481,23 +443,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
             })
         }
     }, [selectedCategoryId, categories])
-
-    useEffect(() => {
-        if (!authToken) return
-        if (adminStep !== "donations") return
-        void (async () => {
-            setError(null)
-            setLoading(true)
-            try {
-                await fetchDonations()
-            } catch (e) {
-                setError((e as Error).message)
-            } finally {
-                setLoading(false)
-            }
-        })()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [authToken, adminStep])
 
     useEffect(() => {
         if (!authToken) return
@@ -1728,7 +1673,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
     return (
         <div className="min-h-screen bg-memorial spiritual-page">
-            <div className="sticky top-0 z-30 spiritual-header border-b border-memorial-line">
+            <div className="sticky top-0 z-30 border-b spiritual-header border-memorial-line">
                 <div className="flex items-center justify-between p-4 sm:p-8">
                     <div className="flex items-center gap-5">
                         <button
@@ -1742,7 +1687,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                 strokeWidth={1.5}
                             />
                         </button>
-                        <h1 className="font-sans text-xl sm:text-2xl italic text-memorial-ink font-bold">
+                        <h1 className="font-sans text-xl italic font-bold sm:text-2xl text-memorial-ink">
                             Admin
                         </h1>
                     </div>
@@ -1750,7 +1695,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                         <button
                             type="button"
                             onClick={() => clearSession()}
-                            className="flex items-center gap-2 px-4 py-2 rounded-full border border-memorial-line text-memorial-muted text-sm font-bold hover:border-memorial-accent/60 transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-bold transition-colors border rounded-full border-memorial-line text-memorial-muted hover:border-memorial-accent/60"
                         >
                             <LogOut
                                 className="w-4 h-4"
@@ -1763,18 +1708,18 @@ const AdminPage: React.FC<AdminPageProps> = ({
             </div>
 
             {!authToken ? (
-                <div className="p-4 sm:p-8 max-w-2xl mx-auto">
-                    <div className="rounded-2xl border border-memorial-line bg-memorial-card p-6 shadow-sm">
+                <div className="max-w-2xl p-4 mx-auto sm:p-8">
+                    <div className="p-6 border shadow-sm rounded-2xl border-memorial-line bg-memorial-card">
                         <div className="mb-4">
                             <div className="text-sm text-memorial-muted font-bold uppercase tracking-[0.1em] mb-2">
                                 Login
                             </div>
-                            <p className="text-memorial-muted text-sm leading-relaxed">
+                            <p className="text-sm leading-relaxed text-memorial-muted">
                                 Enter admin email and
                                 password.
                             </p>
                         </div>
-                        <label className="block text-sm font-bold text-memorial-muted mb-2">
+                        <label className="block mb-2 text-sm font-bold text-memorial-muted">
                             Admin email
                         </label>
                         <input
@@ -1783,9 +1728,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
                             onChange={e =>
                                 setEmail(e.target.value)
                             }
-                            className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-memorial-accent mb-3"
+                            className="w-full px-4 py-3 mb-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-memorial-accent"
                         />
-                        <label className="block text-sm font-bold text-memorial-muted mb-2">
+                        <label className="block mb-2 text-sm font-bold text-memorial-muted">
                             Admin password
                         </label>
                         <input
@@ -1794,18 +1739,18 @@ const AdminPage: React.FC<AdminPageProps> = ({
                             onChange={e =>
                                 setPassword(e.target.value)
                             }
-                            className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-memorial-accent"
+                            className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-memorial-accent"
                         />
                         {error ? (
-                            <div className="text-sm text-red-600 mt-3">
+                            <div className="mt-3 text-sm text-red-600">
                                 {error}
                             </div>
                         ) : null}
-                        <div className="mt-5 flex gap-3">
+                        <div className="flex gap-3 mt-5">
                             <motion.button
                                 type="button"
                                 onClick={handleLogin}
-                                className="flex items-center gap-3 px-5 py-3 rounded-full bg-memorial-ink text-memorial-card font-bold shadow-lg hover:opacity-95 transition-opacity"
+                                className="flex items-center gap-3 px-5 py-3 font-bold transition-opacity rounded-full shadow-lg bg-memorial-ink text-memorial-card hover:opacity-95"
                                 whileTap={{ scale: 0.98 }}
                                 disabled={loading}
                             >
@@ -1816,14 +1761,14 @@ const AdminPage: React.FC<AdminPageProps> = ({
                     </div>
                 </div>
             ) : (
-                <div className="p-4 sm:p-6 pb-20">
-                    <div className="sticky top-0 z-40 -mx-4 sm:-mx-6 px-4 sm:px-6 pt-1 pb-4 mb-6 bg-gradient-to-b from-memorial-card via-memorial-card/98 to-memorial-card/90 backdrop-blur-md border-b border-memorial-line shadow-sm">
+                <div className="p-4 pb-20 sm:p-6">
+                    <div className="sticky top-0 z-40 px-4 pt-1 pb-4 mb-6 -mx-4 border-b shadow-sm sm:-mx-6 sm:px-6 bg-gradient-to-b from-memorial-card via-memorial-card/98 to-memorial-card/90 backdrop-blur-md border-memorial-line">
                         <div className="max-w-6xl mx-auto">
-                            <div className="rounded-2xl border border-memorial-line bg-memorial-card/90 p-4 sm:p-5 shadow-sm mb-4">
-                                <h2 className="font-sans text-lg sm:text-xl text-memorial-ink font-bold">
+                            <div className="p-4 mb-4 border shadow-sm rounded-2xl border-memorial-line bg-memorial-card/90 sm:p-5">
+                                <h2 className="font-sans text-lg font-bold sm:text-xl text-memorial-ink">
                                     Content Management
                                 </h2>
-                                <p className="text-sm text-memorial-muted mt-1">
+                                <p className="mt-1 text-sm text-memorial-muted">
                                     Jump between areas
                                     anytime — the bar stays
                                     visible while you
@@ -1941,48 +1886,20 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                 >
                                     Gallery
                                 </button>
-                                <button
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={
-                                        adminStep ===
-                                        "donations"
-                                    }
-                                    onClick={() => {
-                                        if (
-                                            adminStep ===
-                                                "topics" &&
-                                            !confirmDiscardUnsavedStory()
-                                        )
-                                            return
-                                        setAdminStep(
-                                            "donations"
-                                        )
-                                    }}
-                                    className={`px-4 py-2.5 rounded-xl text-sm font-bold border transition-colors min-h-[44px] ${
-                                        adminStep ===
-                                        "donations"
-                                            ? "bg-memorial-accent text-memorial-card border-memorial-accent shadow-md"
-                                            : "bg-white/90 text-memorial-muted border-memorial-line hover:border-memorial-accent/50"
-                                    }`}
-                                    title="Donations"
-                                >
-                                    Donations
-                                </button>
                             </div>
                         </div>
                     </div>
 
                     {adminStep === "category" ? (
                         <div className="max-w-6xl mx-auto space-y-6">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                                <div className="space-y-6 min-w-0">
-                                    <div className="rounded-2xl border border-memorial-line bg-memorial-card p-5 shadow-sm">
+                            <div className="grid items-start grid-cols-1 gap-6 lg:grid-cols-2">
+                                <div className="min-w-0 space-y-6">
+                                    <div className="p-5 border shadow-sm rounded-2xl border-memorial-line bg-memorial-card">
                                         <div className="text-sm text-memorial-muted font-bold uppercase tracking-[0.1em] mb-2">
                                             Section order
                                             (app menu)
                                         </div>
-                                        <p className="text-sm text-memorial-muted leading-relaxed mb-4">
+                                        <p className="mb-4 text-sm leading-relaxed text-memorial-muted">
                                             Top to bottom is
                                             left-to-right in
                                             the app category
@@ -2003,12 +1920,12 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                         }
                                                         className="flex items-center justify-between gap-3 rounded-xl border border-memorial-line bg-white/80 px-3 py-2.5"
                                                     >
-                                                        <span className="text-sm font-semibold text-memorial-ink truncate">
+                                                        <span className="text-sm font-semibold truncate text-memorial-ink">
                                                             {
                                                                 c.label
                                                             }
                                                         </span>
-                                                        <span className="text-xs font-mono text-memorial-muted shrink-0">
+                                                        <span className="font-mono text-xs text-memorial-muted shrink-0">
                                                             {
                                                                 c.id
                                                             }
@@ -2016,7 +1933,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                         <div className="flex items-center gap-1 shrink-0">
                                                             <button
                                                                 type="button"
-                                                                className="px-2 py-1 rounded-lg border border-memorial-line text-sm font-bold hover:border-memorial-accent/60 disabled:opacity-40"
+                                                                className="px-2 py-1 text-sm font-bold border rounded-lg border-memorial-line hover:border-memorial-accent/60 disabled:opacity-40"
                                                                 disabled={
                                                                     loading ||
                                                                     idx ===
@@ -2035,7 +1952,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                             </button>
                                                             <button
                                                                 type="button"
-                                                                className="px-2 py-1 rounded-lg border border-memorial-line text-sm font-bold hover:border-memorial-accent/60 disabled:opacity-40"
+                                                                className="px-2 py-1 text-sm font-bold border rounded-lg border-memorial-line hover:border-memorial-accent/60 disabled:opacity-40"
                                                                 disabled={
                                                                     loading ||
                                                                     idx ===
@@ -2060,12 +1977,12 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         </div>
                                     </div>
 
-                                    <div className="rounded-2xl border border-memorial-line bg-memorial-card p-5 shadow-sm">
+                                    <div className="p-5 border shadow-sm rounded-2xl border-memorial-line bg-memorial-card">
                                         <div className="text-sm text-memorial-muted font-bold uppercase tracking-[0.1em] mb-2">
                                             Choose or edit a
                                             section
                                         </div>
-                                        <p className="text-sm text-memorial-muted leading-relaxed mb-4">
+                                        <p className="mb-4 text-sm leading-relaxed text-memorial-muted">
                                             Sections appear
                                             in the app
                                             navigation. Set
@@ -2076,7 +1993,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                             individual
                                             stories.
                                         </p>
-                                        <label className="block text-sm font-bold text-memorial-muted mb-2">
+                                        <label className="block mb-2 text-sm font-bold text-memorial-muted">
                                             Section
                                         </label>
                                         <select
@@ -2089,7 +2006,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                         .value
                                                 )
                                             }
-                                            className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                            className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                             disabled={
                                                 loading
                                             }
@@ -2112,7 +2029,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                             )}
                                         </select>
 
-                                        <div className="mt-6 space-y-4 border-t border-memorial-line pt-5">
+                                        <div className="pt-5 mt-6 space-y-4 border-t border-memorial-line">
                                             <label className="block text-sm font-bold text-memorial-ink">
                                                 Section
                                                 title
@@ -2140,9 +2057,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                         })
                                                     )
                                                 }
-                                                className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                                className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                             />
-                                            <label className="block text-sm font-bold text-memorial-ink mt-2">
+                                            <label className="block mt-2 text-sm font-bold text-memorial-ink">
                                                 Section
                                                 subtitle
                                             </label>
@@ -2169,9 +2086,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                         })
                                                     )
                                                 }
-                                                className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                                className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                             />
-                                            <label className="block text-sm font-bold text-memorial-ink mt-2">
+                                            <label className="block mt-2 text-sm font-bold text-memorial-ink">
                                                 Section icon
                                             </label>
                                             <FieldHint>
@@ -2203,7 +2120,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                     )
                                                 }
                                             />
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                                            <div className="grid grid-cols-1 gap-4 mt-4 sm:grid-cols-2">
                                                 <div>
                                                     <label className="block text-sm font-bold text-memorial-ink">
                                                         Card
@@ -2288,7 +2205,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                     />
                                                 </div>
                                             </div>
-                                            <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                            <div className="flex flex-col gap-2 mt-3 sm:flex-row sm:items-center sm:justify-between">
                                                 <button
                                                     type="button"
                                                     onClick={() =>
@@ -2335,7 +2252,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                 onClick={() =>
                                                     void saveCategory()
                                                 }
-                                                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-memorial-ink text-memorial-card font-bold shadow-lg hover:opacity-95 transition-opacity disabled:opacity-50 mt-2"
+                                                className="flex items-center justify-center w-full gap-2 px-4 py-3 mt-2 font-bold transition-opacity rounded-full shadow-lg bg-memorial-ink text-memorial-card hover:opacity-95 disabled:opacity-50"
                                                 disabled={
                                                     loading
                                                 }
@@ -2353,7 +2270,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                 onClick={
                                                     openSectionDeletePrompt
                                                 }
-                                                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-full border border-red-300 text-red-700 font-bold hover:bg-red-50 transition-colors disabled:opacity-50"
+                                                className="flex items-center justify-center w-full gap-2 px-4 py-3 font-bold text-red-700 transition-colors border border-red-300 rounded-full hover:bg-red-50 disabled:opacity-50"
                                                 disabled={
                                                     loading ||
                                                     !selectedCategoryId
@@ -2372,13 +2289,13 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                     </div>
                                 </div>
 
-                                <div className="space-y-6 lg:sticky lg:top-28 lg:self-start min-w-0">
-                                    <div className="rounded-2xl border border-memorial-line bg-memorial-card p-5 shadow-sm">
+                                <div className="min-w-0 space-y-6 lg:sticky lg:top-28 lg:self-start">
+                                    <div className="p-5 border shadow-sm rounded-2xl border-memorial-line bg-memorial-card">
                                         <div className="text-sm text-memorial-muted font-bold uppercase tracking-[0.1em] mb-2">
                                             Add a new
                                             section
                                         </div>
-                                        <p className="text-sm text-memorial-muted leading-relaxed mb-4">
+                                        <p className="mb-4 text-sm leading-relaxed text-memorial-muted">
                                             The section id
                                             is used in URLs
                                             and data:
@@ -2394,7 +2311,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         </p>
                                         <div className="space-y-3">
                                             <div>
-                                                <label className="block text-sm font-bold text-memorial-muted mb-1">
+                                                <label className="block mb-1 text-sm font-bold text-memorial-muted">
                                                     Section
                                                     id (URL
                                                     slug)
@@ -2413,12 +2330,12 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                             })
                                                         )
                                                     }
-                                                    className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none font-mono text-sm"
+                                                    className="w-full px-4 py-3 font-mono bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                                     placeholder="e.g. memorial-notes"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-bold text-memorial-muted mb-1">
+                                                <label className="block mb-1 text-sm font-bold text-memorial-muted">
                                                     Section
                                                     title
                                                 </label>
@@ -2436,12 +2353,12 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                             })
                                                         )
                                                     }
-                                                    className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                                    className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                                     placeholder="Title shown in the app"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-bold text-memorial-muted mb-1">
+                                                <label className="block mb-1 text-sm font-bold text-memorial-muted">
                                                     Section
                                                     subtitle
                                                 </label>
@@ -2460,11 +2377,11 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                             })
                                                         )
                                                     }
-                                                    className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                                    className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-bold text-memorial-muted mb-1">
+                                                <label className="block mb-1 text-sm font-bold text-memorial-muted">
                                                     Section
                                                     icon
                                                 </label>
@@ -2486,9 +2403,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                     }
                                                 />
                                             </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                                 <div>
-                                                    <label className="block text-sm font-bold text-memorial-muted mb-1">
+                                                    <label className="block mb-1 text-sm font-bold text-memorial-muted">
                                                         Card
                                                         color
                                                         (optional)
@@ -2514,7 +2431,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-bold text-memorial-muted mb-1">
+                                                    <label className="block mb-1 text-sm font-bold text-memorial-muted">
                                                         Text
                                                         color
                                                         (optional)
@@ -2554,7 +2471,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                             })
                                                         )
                                                     }
-                                                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-memorial-line text-xs font-bold text-memorial-muted hover:border-memorial-accent/50 hover:text-memorial-ink transition-colors disabled:opacity-40"
+                                                    className="inline-flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors border rounded-lg border-memorial-line text-memorial-muted hover:border-memorial-accent/50 hover:text-memorial-ink disabled:opacity-40"
                                                     disabled={
                                                         loading ||
                                                         (!newCategory.cardColor.trim() &&
@@ -2588,7 +2505,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                 onClick={() =>
                                                     void createCategory()
                                                 }
-                                                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-full border-2 border-memorial-accent text-memorial-accent font-bold hover:bg-memorial-accent/10 transition-colors disabled:opacity-50"
+                                                className="flex items-center justify-center w-full gap-2 px-4 py-3 font-bold transition-colors border-2 rounded-full border-memorial-accent text-memorial-accent hover:bg-memorial-accent/10 disabled:opacity-50"
                                                 disabled={
                                                     loading
                                                 }
@@ -2613,7 +2530,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                     onClick={
                                         continueToTopics
                                     }
-                                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-memorial-ink text-memorial-card font-bold shadow-lg hover:opacity-95 transition-opacity disabled:opacity-50"
+                                    className="inline-flex items-center gap-2 px-6 py-3 font-bold transition-opacity rounded-full shadow-lg bg-memorial-ink text-memorial-card hover:opacity-95 disabled:opacity-50"
                                     disabled={
                                         loading ||
                                         !canContinueToTopics
@@ -2634,14 +2551,14 @@ const AdminPage: React.FC<AdminPageProps> = ({
                             ) : null}
                         </div>
                     ) : adminStep === "topics" ? (
-                        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-                            <div className="lg:col-span-1 space-y-4">
+                        <div className="grid max-w-6xl grid-cols-1 gap-4 mx-auto lg:grid-cols-3 lg:gap-6">
+                            <div className="space-y-4 lg:col-span-1">
                                 <button
                                     type="button"
                                     onClick={
                                         backToCategoryStep
                                     }
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-full border border-memorial-line text-memorial-muted font-bold hover:border-memorial-accent/60 transition-colors text-sm"
+                                    className="flex items-center justify-center w-full gap-2 px-4 py-3 text-sm font-bold transition-colors border rounded-full border-memorial-line text-memorial-muted hover:border-memorial-accent/60"
                                 >
                                     <ArrowLeft
                                         className="w-4 h-4"
@@ -2650,7 +2567,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                     Back to section settings
                                 </button>
 
-                                <div className="rounded-2xl border border-memorial-line bg-memorial-card p-5 shadow-sm">
+                                <div className="p-5 border shadow-sm rounded-2xl border-memorial-line bg-memorial-card">
                                     <div className="text-sm text-memorial-muted font-bold uppercase tracking-[0.1em] mb-1">
                                         Current section
                                     </div>
@@ -2661,7 +2578,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                 selectedCategoryId
                                         )?.label ?? "—"}
                                     </div>
-                                    <p className="text-xs text-memorial-muted mt-2">
+                                    <p className="mt-2 text-xs text-memorial-muted">
                                         Editing topics under
                                         this section. To
                                         change the section
@@ -2671,7 +2588,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                     </p>
                                 </div>
 
-                                <div className="rounded-2xl border border-memorial-line bg-memorial-card p-5 shadow-sm">
+                                <div className="p-5 border shadow-sm rounded-2xl border-memorial-line bg-memorial-card">
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="text-sm text-memorial-muted font-bold uppercase tracking-[0.1em]">
                                             Stories (topics)
@@ -2681,7 +2598,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                             onClick={() =>
                                                 void createTopic()
                                             }
-                                            className="p-2 rounded-full hover:bg-memorial-card/70 transition-colors"
+                                            className="p-2 transition-colors rounded-full hover:bg-memorial-card/70"
                                             disabled={
                                                 loading ||
                                                 !selectedCategoryId
@@ -2730,7 +2647,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                                         1
                                                                 )
                                                             }}
-                                                            className="p-1 rounded border border-memorial-line hover:border-memorial-accent/60 text-xs"
+                                                            className="p-1 text-xs border rounded border-memorial-line hover:border-memorial-accent/60"
                                                             disabled={
                                                                 loading ||
                                                                 idx ===
@@ -2750,7 +2667,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                                         1
                                                                 )
                                                             }}
-                                                            className="p-1 rounded border border-memorial-line hover:border-memorial-accent/60 text-xs"
+                                                            className="p-1 text-xs border rounded border-memorial-line hover:border-memorial-accent/60"
                                                             disabled={
                                                                 loading ||
                                                                 idx ===
@@ -2785,12 +2702,12 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                 </div>
                             </div>
 
-                            <div className="lg:col-span-2 space-y-4">
-                                <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-4">
+                            <div className="space-y-4 lg:col-span-2">
+                                <div className="p-4 border border-indigo-200 rounded-xl bg-indigo-50/60">
                                     <p className="text-xs font-semibold uppercase tracking-[0.08em] text-indigo-700 mb-1">
                                         Consistency Guidance
                                     </p>
-                                    <p className="text-sm text-slate-600 leading-relaxed">
+                                    <p className="text-sm leading-relaxed text-slate-600">
                                         Keep the small
                                         context line short,
                                         the title clear and
@@ -2802,8 +2719,8 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         visually consistent.
                                     </p>
                                 </div>
-                                <div className="rounded-2xl border border-memorial-line bg-memorial-card p-5 shadow-sm">
-                                    <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+                                <div className="p-5 border shadow-sm rounded-2xl border-memorial-line bg-memorial-card">
+                                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                                         <div>
                                             <div className="text-sm text-memorial-muted font-bold uppercase tracking-[0.1em] mb-2">
                                                 Story editor
@@ -2820,7 +2737,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                 onClick={() =>
                                                     void saveTopic()
                                                 }
-                                                className="px-4 py-2 rounded-full bg-memorial-ink text-memorial-card font-bold shadow-lg hover:opacity-95 transition-opacity disabled:opacity-50 flex items-center gap-2"
+                                                className="flex items-center gap-2 px-4 py-2 font-bold transition-opacity rounded-full shadow-lg bg-memorial-ink text-memorial-card hover:opacity-95 disabled:opacity-50"
                                                 disabled={
                                                     loading ||
                                                     !selectedTopicId
@@ -2839,7 +2756,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                 onClick={() =>
                                                     void deleteTopic()
                                                 }
-                                                className="px-4 py-2 rounded-full bg-memorial-card text-memorial-ink font-bold border border-memorial-line hover:border-memorial-accent/60 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                                className="flex items-center gap-2 px-4 py-2 font-bold transition-colors border rounded-full bg-memorial-card text-memorial-ink border-memorial-line hover:border-memorial-accent/60 disabled:opacity-50"
                                                 disabled={
                                                     loading ||
                                                     !selectedTopicId
@@ -2856,11 +2773,11 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         </div>
                                     </div>
 
-                                    <div className="mt-4 rounded-xl border border-memorial-line bg-memorial-card/40 p-4">
+                                    <div className="p-4 mt-4 border rounded-xl border-memorial-line bg-memorial-card/40">
                                         <div className="text-xs font-bold uppercase tracking-[0.08em] text-memorial-muted mb-2">
                                             Move whole story
                                         </div>
-                                        <p className="text-xs text-memorial-muted mb-3 leading-relaxed">
+                                        <p className="mb-3 text-xs leading-relaxed text-memorial-muted">
                                             Transfer this
                                             story to another
                                             section. Content
@@ -2872,7 +2789,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                             destination
                                             list.
                                         </p>
-                                        <div className="flex flex-col sm:flex-row gap-2 sm:items-center flex-wrap">
+                                        <div className="flex flex-col flex-wrap gap-2 sm:flex-row sm:items-center">
                                             <label
                                                 className="sr-only"
                                                 htmlFor="admin-transfer-section"
@@ -2933,7 +2850,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                         transferDestCategoryId
                                                     )
                                                 }
-                                                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-memorial-line bg-memorial-card font-bold text-sm text-memorial-ink hover:border-memorial-accent/60 transition-colors disabled:opacity-50"
+                                                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold transition-colors border rounded-full border-memorial-line bg-memorial-card text-memorial-ink hover:border-memorial-accent/60 disabled:opacity-50"
                                                 disabled={
                                                     loading ||
                                                     !selectedTopicId ||
@@ -2953,7 +2870,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <div className="space-y-2">
                                             <label className="block text-sm font-bold text-memorial-ink">
                                                 Context line
@@ -2986,7 +2903,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                         })
                                                     )
                                                 }
-                                                className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                                className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                                 disabled={
                                                     loading ||
                                                     !selectedTopicId
@@ -3021,7 +2938,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                         })
                                                     )
                                                 }
-                                                className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                                className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                                 disabled={
                                                     loading ||
                                                     !selectedTopicId
@@ -3033,7 +2950,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
                                     {selectedCategoryId ===
                                     "mission" ? (
-                                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 gap-4 mt-4 md:grid-cols-2">
                                             <div className="space-y-2">
                                                 <label className="block text-sm font-bold text-memorial-ink">
                                                     Mission
@@ -3066,7 +2983,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                             })
                                                         )
                                                     }
-                                                    className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                                    className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                                     disabled={
                                                         loading ||
                                                         !selectedTopicId
@@ -3120,7 +3037,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                             })
                                                         )
                                                     }
-                                                    className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                                    className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                                     disabled={
                                                         loading ||
                                                         !selectedTopicId
@@ -3153,7 +3070,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                     })
                                                 )
                                             }
-                                            className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                            className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                             disabled={
                                                 loading ||
                                                 !selectedTopicId
@@ -3162,15 +3079,15 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         />
                                     </div>
 
-                                    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="rounded-2xl border border-memorial-line bg-memorial-card/60 p-4">
+                                    <div className="grid grid-cols-1 gap-4 mt-6 md:grid-cols-2">
+                                        <div className="p-4 border rounded-2xl border-memorial-line bg-memorial-card/60">
                                             <div className="flex items-center justify-between mb-3">
                                                 <div className="text-sm text-memorial-muted font-bold uppercase tracking-[0.1em]">
                                                     Images
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-full border border-memorial-line hover:border-memorial-accent/60 transition-colors text-sm font-bold text-memorial-muted">
+                                                <label className="inline-flex items-center gap-2 px-3 py-2 text-sm font-bold transition-colors border rounded-full cursor-pointer border-memorial-line hover:border-memorial-accent/60 text-memorial-muted">
                                                     <Upload
                                                         className="w-4 h-4 text-memorial-accent"
                                                         strokeWidth={
@@ -3209,7 +3126,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                                     .value
                                                             )
                                                         }
-                                                        className="flex-1 bg-transparent border border-memorial-line rounded-xl px-3 py-2 text-sm outline-none"
+                                                        className="flex-1 px-3 py-2 text-sm bg-transparent border outline-none border-memorial-line rounded-xl"
                                                         disabled={
                                                             loading ||
                                                             images.length ===
@@ -3255,7 +3172,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                                         .value
                                                                 )
                                                             }
-                                                            className="flex-1 bg-transparent border border-memorial-line rounded-xl px-3 py-2 text-sm text-memorial-ink outline-none"
+                                                            className="flex-1 px-3 py-2 text-sm bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                                             placeholder="Describe this image"
                                                             disabled={
                                                                 loading
@@ -3266,7 +3183,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                             onClick={() =>
                                                                 void updateTopicImageTag()
                                                             }
-                                                            className="px-3 py-2 rounded-lg border border-memorial-line text-xs font-bold text-memorial-muted hover:border-memorial-accent/60 transition-colors disabled:opacity-50"
+                                                            className="px-3 py-2 text-xs font-bold transition-colors border rounded-lg border-memorial-line text-memorial-muted hover:border-memorial-accent/60 disabled:opacity-50"
                                                             disabled={
                                                                 loading ||
                                                                 !selectedImageId
@@ -3293,7 +3210,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                                     img.alt ||
                                                                     "Story image"
                                                                 }
-                                                                className="w-full h-20 object-cover bg-memorial-card"
+                                                                className="object-cover w-full h-20 bg-memorial-card"
                                                             />
                                                         </div>
                                                     )
@@ -3312,7 +3229,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                             </div>
                                         </div>
 
-                                        <div className="rounded-2xl border border-memorial-line bg-memorial-card/60 p-4">
+                                        <div className="p-4 border rounded-2xl border-memorial-line bg-memorial-card/60">
                                             <div className="flex items-center justify-between mb-3">
                                                 <div className="text-sm text-memorial-muted font-bold uppercase tracking-[0.1em]">
                                                     Story
@@ -3335,7 +3252,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                                 })
                                                             )
                                                         }
-                                                        className="p-2 rounded-full hover:bg-memorial-card/70 transition-colors"
+                                                        className="p-2 transition-colors rounded-full hover:bg-memorial-card/70"
                                                         disabled={
                                                             loading ||
                                                             !selectedTopicId
@@ -3370,7 +3287,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                                 })
                                                             )
                                                         }}
-                                                        className="p-2 rounded-full hover:bg-memorial-card/70 transition-colors disabled:opacity-50"
+                                                        className="p-2 transition-colors rounded-full hover:bg-memorial-card/70 disabled:opacity-50"
                                                         disabled={
                                                             loading ||
                                                             !selectedTopicId ||
@@ -3396,7 +3313,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                     ) => (
                                                         <div
                                                             key={`${idx}_${block.type}`}
-                                                            className="border border-memorial-line rounded-2xl bg-memorial-card p-3"
+                                                            className="p-3 border border-memorial-line rounded-2xl bg-memorial-card"
                                                         >
                                                             <div className="flex items-center justify-between gap-2 mb-2">
                                                                 <div className="text-xs uppercase tracking-[0.1em] text-memorial-muted font-bold">
@@ -3691,7 +3608,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                                                 idx
                                                                             )
                                                                         }
-                                                                        className="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-memorial-line bg-white/90 text-sm font-bold text-memorial-ink hover:border-memorial-accent/60 transition-colors disabled:opacity-50"
+                                                                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-bold transition-colors border rounded-xl border-memorial-line bg-white/90 text-memorial-ink hover:border-memorial-accent/60 disabled:opacity-50"
                                                                         disabled={
                                                                             loading ||
                                                                             !selectedTopicId
@@ -3739,7 +3656,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                                                 }
                                                                             )
                                                                         }}
-                                                                        className="w-full bg-transparent border border-memorial-line rounded-xl px-3 py-2 text-sm outline-none"
+                                                                        className="w-full px-3 py-2 text-sm bg-transparent border outline-none border-memorial-line rounded-xl"
                                                                         disabled={
                                                                             loading ||
                                                                             images.length ===
@@ -3765,7 +3682,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                                     <img
                                                                         src={`/api/images/${block.imageId}`}
                                                                         alt="Selected story image"
-                                                                        className="w-full h-56 object-cover rounded-xl border border-memorial-line bg-memorial-card"
+                                                                        className="object-cover w-full h-56 border rounded-xl border-memorial-line bg-memorial-card"
                                                                     />
                                                                 </div>
                                                             )}
@@ -3799,7 +3716,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         "videos" ||
                                     selectedCategoryId ===
                                         "events" ? (
-                                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 gap-4 mt-4 md:grid-cols-2">
                                             <div className="space-y-2">
                                                 <label className="block text-sm font-bold text-memorial-ink">
                                                     Thumbnail
@@ -3835,7 +3752,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                             })
                                                         )
                                                     }
-                                                    className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                                    className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                                     disabled={
                                                         loading ||
                                                         !selectedTopicId
@@ -3867,7 +3784,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
                                     {selectedCategoryId ===
                                     "videos" ? (
-                                        <div className="mt-4 grid grid-cols-1 gap-4">
+                                        <div className="grid grid-cols-1 gap-4 mt-4">
                                             <div className="space-y-2">
                                                 <label className="block text-sm font-bold text-memorial-ink">
                                                     Video
@@ -3897,7 +3814,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                             })
                                                         )
                                                     }
-                                                    className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                                    className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                                     disabled={
                                                         loading ||
                                                         !selectedTopicId
@@ -3910,7 +3827,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
                                     {selectedCategoryId ===
                                     "events" ? (
-                                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 gap-4 mt-4 md:grid-cols-2">
                                             <div className="space-y-2">
                                                 <label className="block text-sm font-bold text-memorial-ink">
                                                     Event
@@ -3945,7 +3862,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                             })
                                                         )
                                                     }
-                                                    className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                                    className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                                     disabled={
                                                         loading ||
                                                         !selectedTopicId
@@ -3984,7 +3901,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                             })
                                                         )
                                                     }
-                                                    className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                                    className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                                     disabled={
                                                         loading ||
                                                         !selectedTopicId
@@ -4003,155 +3920,15 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                 ) : null}
                             </div>
                         </div>
-                    ) : adminStep === "donations" ? (
-                        <div className="max-w-6xl mx-auto space-y-4">
-                            <div className="rounded-2xl border border-memorial-line bg-memorial-card p-5 sm:p-6 shadow-sm">
-                                <div className="flex items-center justify-between gap-3 flex-wrap">
-                                    <div>
-                                        <div className="text-sm text-memorial-muted font-bold uppercase tracking-[0.1em]">
-                                            Donations
-                                        </div>
-                                        <p className="text-sm text-memorial-muted mt-1">
-                                            Latest donations
-                                            captured from
-                                            Flutterwave
-                                            verification.
-                                        </p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            void fetchDonations()
-                                        }
-                                        className="px-4 py-2 rounded-full border border-memorial-line text-memorial-muted font-bold hover:border-memorial-accent/60 transition-colors disabled:opacity-50"
-                                        disabled={loading}
-                                    >
-                                        Refresh
-                                    </button>
-                                </div>
-                                <div className="mt-3 text-xs text-memorial-muted">
-                                    Total records:{" "}
-                                    {donations.length}
-                                </div>
-                            </div>
-
-                            <div className="rounded-2xl border border-memorial-line bg-memorial-card p-4 sm:p-5 shadow-sm">
-                                {donations.length === 0 ? (
-                                    <p className="text-sm text-memorial-muted">
-                                        No donations
-                                        captured yet.
-                                    </p>
-                                ) : (
-                                    <div className="overflow-x-auto">
-                                        <table className="min-w-full text-left text-sm">
-                                            <thead>
-                                                <tr className="text-xs uppercase tracking-[0.08em] text-memorial-muted">
-                                                    <th className="py-2 pr-4">
-                                                        Date
-                                                    </th>
-                                                    <th className="py-2 pr-4">
-                                                        Donor
-                                                    </th>
-                                                    <th className="py-2 pr-4">
-                                                        Amount
-                                                    </th>
-                                                    <th className="py-2 pr-4">
-                                                        Method
-                                                    </th>
-                                                    <th className="py-2 pr-4">
-                                                        Status
-                                                    </th>
-                                                    <th className="py-2 pr-4">
-                                                        Email
-                                                    </th>
-                                                    <th className="py-2 pr-4">
-                                                        Phone
-                                                    </th>
-                                                    <th className="py-2 pr-4">
-                                                        Tx
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {donations.map(
-                                                    d => (
-                                                        <tr
-                                                            key={
-                                                                d.id
-                                                            }
-                                                            className="border-t border-memorial-line/70"
-                                                        >
-                                                            <td className="py-2 pr-4 text-xs text-memorial-muted whitespace-nowrap">
-                                                                {new Date(
-                                                                    d.created_at
-                                                                ).toLocaleString()}
-                                                            </td>
-                                                            <td className="py-2 pr-4 font-semibold text-memorial-ink">
-                                                                {d.customer_name ||
-                                                                    "-"}
-                                                            </td>
-                                                            <td className="py-2 pr-4 font-semibold text-memorial-ink whitespace-nowrap">
-                                                                {
-                                                                    d.currency
-                                                                }{" "}
-                                                                {Number(
-                                                                    d.amount
-                                                                ).toLocaleString()}
-                                                            </td>
-                                                            <td className="py-2 pr-4 text-xs uppercase text-memorial-muted">
-                                                                {d.payment_method ||
-                                                                    "-"}
-                                                            </td>
-                                                            <td
-                                                                className={`py-2 pr-4 text-xs font-semibold ${
-                                                                    d.status ===
-                                                                    "successful"
-                                                                        ? "text-emerald-600"
-                                                                        : "text-amber-600"
-                                                                }`}
-                                                            >
-                                                                {
-                                                                    d.status
-                                                                }
-                                                            </td>
-                                                            <td className="py-2 pr-4 text-xs text-memorial-muted">
-                                                                {normalizeDonorEmail(
-                                                                    d.customer_email
-                                                                )}
-                                                            </td>
-                                                            <td className="py-2 pr-4 text-xs text-memorial-muted">
-                                                                {d.customer_phone ||
-                                                                    "-"}
-                                                            </td>
-                                                            <td className="py-2 pr-4 text-xs font-mono text-memorial-muted">
-                                                                {
-                                                                    d.transaction_id
-                                                                }
-                                                            </td>
-                                                        </tr>
-                                                    )
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </div>
-
-                            {error ? (
-                                <div className="text-sm text-red-600">
-                                    {error}
-                                </div>
-                            ) : null}
-                        </div>
                     ) : (
                         <div className="max-w-6xl mx-auto">
-                            <div className="rounded-2xl border border-memorial-line bg-memorial-card p-5 sm:p-6 shadow-sm">
-                                <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
+                            <div className="p-5 border shadow-sm rounded-2xl border-memorial-line bg-memorial-card sm:p-6">
+                                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                                     <div>
                                         <div className="text-sm text-memorial-muted font-bold uppercase tracking-[0.1em]">
                                             Gallery images
                                         </div>
-                                        <p className="text-sm text-memorial-muted mt-1">
+                                        <p className="mt-1 text-sm text-memorial-muted">
                                             Create gallery
                                             categories
                                             first, then
@@ -4162,9 +3939,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         </p>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                                <div className="grid grid-cols-1 gap-4 mb-4 lg:grid-cols-3">
                                     <div className="lg:col-span-2">
-                                        <label className="block text-sm font-bold text-memorial-muted mb-2">
+                                        <label className="block mb-2 text-sm font-bold text-memorial-muted">
                                             Gallery category
                                         </label>
                                         <select
@@ -4189,7 +3966,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                         ""
                                                 )
                                             }}
-                                            className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                            className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                             disabled={
                                                 loading ||
                                                 galleryCategories.length ===
@@ -4215,7 +3992,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         </select>
                                     </div>
                                     <div className="flex items-end">
-                                        <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-full border border-memorial-line hover:border-memorial-accent/60 transition-colors text-sm font-bold text-memorial-muted">
+                                        <label className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold transition-colors border rounded-full cursor-pointer border-memorial-line hover:border-memorial-accent/60 text-memorial-muted">
                                             <Upload
                                                 className="w-4 h-4 text-memorial-accent"
                                                 strokeWidth={
@@ -4245,9 +4022,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         </label>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                                <div className="grid grid-cols-1 gap-4 mb-6 lg:grid-cols-3">
                                     <div className="lg:col-span-2">
-                                        <label className="block text-sm font-bold text-memorial-muted mb-2">
+                                        <label className="block mb-2 text-sm font-bold text-memorial-muted">
                                             New gallery
                                             category name
                                         </label>
@@ -4261,7 +4038,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                         .value
                                                 )
                                             }
-                                            className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                            className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                             placeholder="e.g. Pilgrims, Events, Eucharistic Devotion"
                                         />
                                     </div>
@@ -4271,7 +4048,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                             onClick={() =>
                                                 void createGalleryCategory()
                                             }
-                                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-full border-2 border-memorial-accent text-memorial-accent font-bold hover:bg-memorial-accent/10 transition-colors disabled:opacity-50"
+                                            className="flex items-center justify-center w-full gap-2 px-4 py-3 font-bold transition-colors border-2 rounded-full border-memorial-accent text-memorial-accent hover:bg-memorial-accent/10 disabled:opacity-50"
                                             disabled={
                                                 loading
                                             }
@@ -4287,9 +4064,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         </button>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                                <div className="grid grid-cols-1 gap-4 mb-4 lg:grid-cols-3">
                                     <div className="lg:col-span-2">
-                                        <label className="block text-sm font-bold text-memorial-muted mb-2">
+                                        <label className="block mb-2 text-sm font-bold text-memorial-muted">
                                             Rename selected
                                             category
                                         </label>
@@ -4303,7 +4080,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                         .value
                                                 )
                                             }
-                                            className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                            className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                             placeholder="Category name"
                                             disabled={
                                                 loading ||
@@ -4317,7 +4094,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                             onClick={() =>
                                                 void renameGalleryCategory()
                                             }
-                                            className="flex-1 px-4 py-3 rounded-full bg-memorial-ink text-memorial-card font-bold shadow-lg hover:opacity-95 transition-opacity disabled:opacity-50"
+                                            className="flex-1 px-4 py-3 font-bold transition-opacity rounded-full shadow-lg bg-memorial-ink text-memorial-card hover:opacity-95 disabled:opacity-50"
                                             disabled={
                                                 loading ||
                                                 !selectedGalleryCategoryId
@@ -4330,7 +4107,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                             onClick={() =>
                                                 void deleteGalleryCategory()
                                             }
-                                            className="px-4 py-3 rounded-full border border-red-300 text-red-600 font-bold hover:bg-red-50 transition-colors disabled:opacity-50"
+                                            className="px-4 py-3 font-bold text-red-600 transition-colors border border-red-300 rounded-full hover:bg-red-50 disabled:opacity-50"
                                             disabled={
                                                 loading ||
                                                 !selectedGalleryCategoryId ||
@@ -4343,7 +4120,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                     </div>
                                 </div>
                                 <div className="mb-3 overflow-x-auto">
-                                    <div className="inline-flex gap-2 min-w-full pb-1">
+                                    <div className="inline-flex min-w-full gap-2 pb-1">
                                         {galleryCategories.map(
                                             c => (
                                                 <button
@@ -4372,14 +4149,14 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         )}
                                     </div>
                                 </div>
-                                <p className="text-xs text-memorial-muted mb-3">
+                                <p className="mb-3 text-xs text-memorial-muted">
                                     Drag and drop images
                                     below to reorder within
                                     the selected category.
                                 </p>
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                                <div className="grid grid-cols-1 gap-4 mb-4 lg:grid-cols-3">
                                     <div className="lg:col-span-2">
-                                        <label className="block text-sm font-bold text-memorial-muted mb-2">
+                                        <label className="block mb-2 text-sm font-bold text-memorial-muted">
                                             Move selected
                                             image to
                                             category
@@ -4394,7 +4171,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                         .value
                                                 )
                                             }
-                                            className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                            className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                             disabled={
                                                 loading ||
                                                 galleryCategories.length ===
@@ -4427,7 +4204,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                     selectedGalleryCategoryId
                                                 )
                                             }
-                                            className="w-full px-4 py-3 rounded-full bg-memorial-ink text-memorial-card font-bold shadow-lg hover:opacity-95 transition-opacity disabled:opacity-50"
+                                            className="w-full px-4 py-3 font-bold transition-opacity rounded-full shadow-lg bg-memorial-ink text-memorial-card hover:opacity-95 disabled:opacity-50"
                                             disabled={
                                                 loading ||
                                                 !selectedGalleryImageId ||
@@ -4439,9 +4216,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         </button>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                                <div className="grid grid-cols-1 gap-4 mb-4 lg:grid-cols-3">
                                     <div className="lg:col-span-2">
-                                        <label className="block text-sm font-bold text-memorial-muted mb-2">
+                                        <label className="block mb-2 text-sm font-bold text-memorial-muted">
                                             Selected image
                                             tag /
                                             description
@@ -4456,7 +4233,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                         .value
                                                 )
                                             }
-                                            className="w-full bg-transparent border border-memorial-line rounded-xl px-4 py-3 text-base text-memorial-ink outline-none"
+                                            className="w-full px-4 py-3 text-base bg-transparent border outline-none border-memorial-line rounded-xl text-memorial-ink"
                                             placeholder="Describe the selected gallery image"
                                             disabled={
                                                 loading ||
@@ -4470,7 +4247,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                             onClick={() =>
                                                 void updateSelectedGalleryImageTag()
                                             }
-                                            className="w-full px-4 py-3 rounded-full border border-memorial-line text-memorial-muted font-bold hover:border-memorial-accent/60 transition-colors disabled:opacity-50"
+                                            className="w-full px-4 py-3 font-bold transition-colors border rounded-full border-memorial-line text-memorial-muted hover:border-memorial-accent/60 disabled:opacity-50"
                                             disabled={
                                                 loading ||
                                                 !selectedGalleryImageId
@@ -4481,13 +4258,13 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         </button>
                                     </div>
                                 </div>
-                                <div className="mb-4 flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-2 mb-4">
                                     <button
                                         type="button"
                                         onClick={() =>
                                             void deleteSelectedGalleryImage()
                                         }
-                                        className="px-4 py-2 rounded-full border border-red-300 text-red-600 font-bold hover:bg-red-50 transition-colors disabled:opacity-50"
+                                        className="px-4 py-2 font-bold text-red-600 transition-colors border border-red-300 rounded-full hover:bg-red-50 disabled:opacity-50"
                                         disabled={
                                             loading ||
                                             !selectedGalleryImageId
@@ -4501,7 +4278,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         onClick={() =>
                                             void deleteCheckedGalleryImages()
                                         }
-                                        className="px-4 py-2 rounded-full border border-red-300 text-red-600 font-bold hover:bg-red-50 transition-colors disabled:opacity-50"
+                                        className="px-4 py-2 font-bold text-red-600 transition-colors border border-red-300 rounded-full hover:bg-red-50 disabled:opacity-50"
                                         disabled={
                                             loading ||
                                             checkedGalleryImageIds.length ===
@@ -4522,7 +4299,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                 -1
                                             )
                                         }
-                                        className="px-4 py-2 rounded-full border border-memorial-line text-memorial-muted font-bold hover:border-memorial-accent/60 transition-colors disabled:opacity-50"
+                                        className="px-4 py-2 font-bold transition-colors border rounded-full border-memorial-line text-memorial-muted hover:border-memorial-accent/60 disabled:opacity-50"
                                         disabled={
                                             loading ||
                                             !selectedGalleryImageId ||
@@ -4561,7 +4338,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                 1
                                             )
                                         }
-                                        className="px-4 py-2 rounded-full border border-memorial-line text-memorial-muted font-bold hover:border-memorial-accent/60 transition-colors disabled:opacity-50"
+                                        className="px-4 py-2 font-bold transition-colors border rounded-full border-memorial-line text-memorial-muted hover:border-memorial-accent/60 disabled:opacity-50"
                                         disabled={
                                             loading ||
                                             !selectedGalleryImageId ||
@@ -4598,7 +4375,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         down
                                     </button>
                                 </div>
-                                <div className="mb-4 flex gap-2">
+                                <div className="flex gap-2 mb-4">
                                     <button
                                         type="button"
                                         onClick={() =>
@@ -4606,7 +4383,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                 -1
                                             )
                                         }
-                                        className="px-3 py-2 rounded border border-memorial-line hover:border-memorial-accent/60 text-sm"
+                                        className="px-3 py-2 text-sm border rounded border-memorial-line hover:border-memorial-accent/60"
                                         disabled={
                                             loading ||
                                             galleryCategories.findIndex(
@@ -4625,7 +4402,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                 1
                                             )
                                         }
-                                        className="px-3 py-2 rounded border border-memorial-line hover:border-memorial-accent/60 text-sm"
+                                        className="px-3 py-2 text-sm border rounded border-memorial-line hover:border-memorial-accent/60"
                                         disabled={
                                             loading ||
                                             galleryCategories.findIndex(
@@ -4773,7 +4550,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                                     img.alt ||
                                                     img.filename
                                                 }
-                                                className="w-full h-28 object-cover"
+                                                className="object-cover w-full h-28"
                                                 title={
                                                     img.categoryName
                                                 }
@@ -4800,7 +4577,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                 </div>
                             </div>
                             {error ? (
-                                <div className="text-sm text-red-600 mt-3">
+                                <div className="mt-3 text-sm text-red-600">
                                     {error}
                                 </div>
                             ) : null}
@@ -4836,7 +4613,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                     }}
                 >
                     <div
-                        className="w-full max-w-md rounded-2xl border border-memorial-line bg-memorial-card p-6 shadow-2xl spiritual-depth"
+                        className="w-full max-w-md p-6 border shadow-2xl rounded-2xl border-memorial-line bg-memorial-card spiritual-depth"
                         onClick={e => e.stopPropagation()}
                     >
                         <h3
@@ -4845,7 +4622,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                         >
                             Delete this section?
                         </h3>
-                        <p className="mt-3 text-sm text-memorial-muted leading-relaxed">
+                        <p className="mt-3 text-sm leading-relaxed text-memorial-muted">
                             <span className="font-semibold text-memorial-ink">
                                 {sectionDeletePrompt.label}
                             </span>{" "}
@@ -4853,10 +4630,10 @@ const AdminPage: React.FC<AdminPageProps> = ({
                             permanently removed. This cannot
                             be undone.
                         </p>
-                        <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                        <div className="flex flex-col-reverse gap-2 mt-6 sm:flex-row sm:justify-end">
                             <button
                                 type="button"
-                                className="w-full sm:w-auto px-4 py-3 rounded-xl border border-memorial-line font-bold text-memorial-muted hover:bg-white/80 transition-colors"
+                                className="w-full px-4 py-3 font-bold transition-colors border sm:w-auto rounded-xl border-memorial-line text-memorial-muted hover:bg-white/80"
                                 onClick={() =>
                                     setSectionDeletePrompt(
                                         null
@@ -4868,7 +4645,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                             </button>
                             <button
                                 type="button"
-                                className="w-full sm:w-auto px-4 py-3 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
+                                className="w-full px-4 py-3 font-bold text-white transition-colors bg-red-600 sm:w-auto rounded-xl hover:bg-red-700 disabled:opacity-50"
                                 onClick={() =>
                                     void confirmSectionDelete()
                                 }

@@ -1,7 +1,6 @@
 import React, { useState } from "react"
 import { motion } from "framer-motion"
 import { useTypewriter } from "../hooks/useTypewriter"
-import DonationLauncher from "./DonationLauncher"
 
 const PORTRAIT_SRC = "/images/SisterAnn2.JPG"
 
@@ -137,9 +136,6 @@ const HeroScreen: React.FC<HeroScreenProps> = ({
                             Menu
                         </span>
                     </motion.button>
-                    <div className="ml-3">
-                        <DonationLauncher variant="hero" />
-                    </div>
                 </motion.div>
 
                 <motion.nav

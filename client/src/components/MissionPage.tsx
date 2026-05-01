@@ -4,7 +4,6 @@ import { ArrowLeft, Compass } from "lucide-react"
 import MissionCard from "./MissionCard"
 import StoryReadingView from "./StoryReadingView"
 import { CONTENT_UNAVAILABLE_MESSAGE } from "../constants/messages"
-import DonationLauncher from "./DonationLauncher"
 import type {
     MissionCard as MissionCardType,
     ContentCard
@@ -106,7 +105,6 @@ const MissionPage: React.FC<MissionPageProps> = ({
                                 </h1>
                             </div>
                             <div className="flex items-center gap-3">
-                                <DonationLauncher />
                                 <Compass
                                     className="w-10 h-10 text-memorial-accent"
                                     strokeWidth={0.8}

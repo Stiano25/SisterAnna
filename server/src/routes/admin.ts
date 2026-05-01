@@ -1368,35 +1368,4 @@ router.delete(
     }
 )
 
-// Donations (read-only)
-router.get("/donations", async (req, res) => {
-    try {
-        const r = await db.query(
-            `
-      SELECT
-        id,
-        tx_ref,
-        transaction_id,
-        amount,
-        currency,
-        status,
-        payment_method,
-        customer_name,
-        customer_email,
-        customer_phone,
-        created_at
-      FROM donations
-      ORDER BY created_at DESC
-      LIMIT 200
-      `
-        )
-        res.json(r.rows)
-    } catch (err) {
-        console.error(err)
-        res.status(500).json({
-            error: "Failed to load donations"
-        })
-    }
-})
-
 export default router
