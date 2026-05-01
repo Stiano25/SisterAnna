@@ -77,9 +77,8 @@ const pageSeo: Record<
 function App() {
     const { currentPage, direction, goTo, goBack, reset } =
         useNavigation()
-    const [donationStatus, setDonationStatus] = useState<
-        DonationStatus | null
-    >(null)
+    const [donationStatus, setDonationStatus] =
+        useState<DonationStatus | null>(null)
     const seo = pageSeo[currentPage] ?? pageSeo.home
     const canonicalPath =
         currentPage === "home"
@@ -168,9 +167,8 @@ function App() {
                 />
             ) : null}
             <DonationFloating
-                onStatus={
-                    (status: DonationStatus | null) =>
-                        setDonationStatus(status)
+                onStatus={(status: DonationStatus | null) =>
+                    setDonationStatus(status)
                 }
             />
             <Helmet>

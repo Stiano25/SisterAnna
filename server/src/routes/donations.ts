@@ -105,7 +105,9 @@ function normalizeMethod(
     const normalized = String(value || "")
         .trim()
         .toLowerCase()
-    if (!SUPPORTED_METHODS.has(normalized as PaymentMethod)) {
+    if (
+        !SUPPORTED_METHODS.has(normalized as PaymentMethod)
+    ) {
         return null
     }
     return normalized as PaymentMethod
@@ -119,14 +121,17 @@ async function paystackRequest<T>(
     if (!PAYSTACK_SECRET_KEY) {
         throw new Error("Paystack secret key missing")
     }
-    const res = await fetch(`${PAYSTACK_API_BASE}/${path}`, {
-        method,
-        headers: {
-            Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-            "Content-Type": "application/json"
-        },
-        body: body ? JSON.stringify(body) : undefined
-    })
+    const res = await fetch(
+        `${PAYSTACK_API_BASE}/${path}`,
+        {
+            method,
+            headers: {
+                Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+                "Content-Type": "application/json"
+            },
+            body: body ? JSON.stringify(body) : undefined
+        }
+    )
 
     const json = (await res
         .json()
@@ -152,14 +157,21 @@ async function saveDonationIfSuccessful(
     const metadata = payload.metadata || {}
     const customerName =
         metadata.donor_name ||
-        [payload.customer?.first_name, payload.customer?.last_name]
+        [
+            payload.customer?.first_name,
+            payload.customer?.last_name
+        ]
             .filter(Boolean)
             .join(" ") ||
         null
     const customerEmail =
-        metadata.donor_email || payload.customer?.email || null
+        metadata.donor_email ||
+        payload.customer?.email ||
+        null
     const customerPhone =
-        metadata.donor_phone || payload.customer?.phone || null
+        metadata.donor_phone ||
+        payload.customer?.phone ||
+        null
     const paymentType =
         metadata.payment_method || payload.channel || null
     const amount = payload.amount / 100
@@ -219,13 +231,19 @@ router.post("/init", async (req, res) => {
         })
         return
     }
-    if (!customer?.name?.trim() || !customer?.email?.trim()) {
+    if (
+        !customer?.name?.trim() ||
+        !customer?.email?.trim()
+    ) {
         res.status(400).json({
             error: "Name and email are required"
         })
         return
     }
-    if (selectedMethod === "mpesa" && !customer?.phone?.trim()) {
+    if (
+        selectedMethod === "mpesa" &&
+        !customer?.phone?.trim()
+    ) {
         res.status(400).json({
             error: "Phone is required for M-Pesa"
         })
@@ -237,22 +255,24 @@ router.post("/init", async (req, res) => {
     const amountMinor = Math.round(normalizedAmount * 100)
 
     try {
-        const response = await paystackRequest<PaystackInitResponse>(
-            "transaction/initialize",
-            {
-                email: customer.email.trim(),
-                amount: amountMinor,
-                currency,
-                reference,
-                channels: METHOD_CHANNELS[selectedMethod],
-                metadata: {
-                    donor_name: customer.name.trim(),
-                    donor_email: customer.email.trim(),
-                    donor_phone: customer.phone.trim(),
-                    payment_method: selectedMethod
+        const response =
+            await paystackRequest<PaystackInitResponse>(
+                "transaction/initialize",
+                {
+                    email: customer.email.trim(),
+                    amount: amountMinor,
+                    currency,
+                    reference,
+                    channels:
+                        METHOD_CHANNELS[selectedMethod],
+                    metadata: {
+                        donor_name: customer.name.trim(),
+                        donor_email: customer.email.trim(),
+                        donor_phone: customer.phone.trim(),
+                        payment_method: selectedMethod
+                    }
                 }
-            }
-        )
+            )
 
         const accessCode = response?.data?.access_code
         const referenceOut = response?.data?.reference
@@ -280,7 +300,9 @@ router.post("/init", async (req, res) => {
 router.get("/verify", async (req, res) => {
     if (!requireSecretKey(res)) return
 
-    const reference = String(req.query.reference || "").trim()
+    const reference = String(
+        req.query.reference || ""
+    ).trim()
     if (!reference) {
         res.status(400).json({
             error: "reference is required"
@@ -314,52 +336,49 @@ router.get("/verify", async (req, res) => {
 })
 
 router.post("/paystack/webhook", async (req, res) => {
-        if (!requireSecretKey(res)) return
+    if (!requireSecretKey(res)) return
 
-        const signature = req.headers[
-            "x-paystack-signature"
-        ]
-        const signatureValue =
-            typeof signature === "string" ? signature : ""
-        if (!signatureValue) {
-            res.status(401).json({
-                error: "Missing webhook signature"
-            })
-            return
-        }
+    const signature = req.headers["x-paystack-signature"]
+    const signatureValue =
+        typeof signature === "string" ? signature : ""
+    if (!signatureValue) {
+        res.status(401).json({
+            error: "Missing webhook signature"
+        })
+        return
+    }
 
-        const rawBody = (req as { rawBody?: Buffer })
-            .rawBody
-        if (!rawBody) {
-            res.status(400).json({
-                error: "Missing raw webhook body"
-            })
-            return
-        }
-        const hash = createHmac(
-            "sha512",
-            PAYSTACK_SECRET_KEY as string
-        )
-            .update(rawBody)
-            .digest("hex")
+    const rawBody = (req as { rawBody?: Buffer }).rawBody
+    if (!rawBody) {
+        res.status(400).json({
+            error: "Missing raw webhook body"
+        })
+        return
+    }
+    const hash = createHmac(
+        "sha512",
+        PAYSTACK_SECRET_KEY as string
+    )
+        .update(rawBody)
+        .digest("hex")
 
-        if (hash !== signatureValue) {
-            res.status(401).json({
-                error: "Invalid webhook signature"
-            })
-            return
-        }
+    if (hash !== signatureValue) {
+        res.status(401).json({
+            error: "Invalid webhook signature"
+        })
+        return
+    }
 
-        const payload = req.body as {
-            event?: string
-            data?: PaystackVerifyResponse["data"]
-        }
+    const payload = req.body as {
+        event?: string
+        data?: PaystackVerifyResponse["data"]
+    }
 
-        if (payload.event === "charge.success") {
-            await saveDonationIfSuccessful(payload.data)
-        }
+    if (payload.event === "charge.success") {
+        await saveDonationIfSuccessful(payload.data)
+    }
 
-        res.json({ ok: true })
-    })
+    res.json({ ok: true })
+})
 
 export default router

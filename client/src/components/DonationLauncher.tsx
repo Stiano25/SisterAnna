@@ -1,5 +1,7 @@
 import React, { useState } from "react"
-import DonationModal, { DonationStatus } from "./DonationModal"
+import DonationModal, {
+    DonationStatus
+} from "./DonationModal"
 
 interface DonationLauncherProps {
     variant?: "hero" | "header"

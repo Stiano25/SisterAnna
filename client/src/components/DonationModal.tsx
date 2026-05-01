@@ -41,7 +41,9 @@ type PaystackSetupOptions = {
 declare global {
     interface Window {
         PaystackPop?: {
-            setup: (options: PaystackSetupOptions) => PaystackHandler
+            setup: (
+                options: PaystackSetupOptions
+            ) => PaystackHandler
         }
     }
 }
@@ -51,7 +53,8 @@ const PRESET_AMOUNTS: Record<PaymentMethod, number[]> = {
     card: [500, 1000, 2500, 5000]
 }
 
-const PAYSTACK_SCRIPT_SRC = "https://js.paystack.co/v1/inline.js"
+const PAYSTACK_SCRIPT_SRC =
+    "https://js.paystack.co/v1/inline.js"
 let paystackScriptPromise: Promise<void> | null = null
 
 const loadPaystackScript = () => {
@@ -63,32 +66,42 @@ const loadPaystackScript = () => {
     if (window.PaystackPop) return Promise.resolve()
     if (paystackScriptPromise) return paystackScriptPromise
 
-    paystackScriptPromise = new Promise((resolve, reject) => {
-        const existing = document.querySelector(
-            `script[src="${PAYSTACK_SCRIPT_SRC}"]`
-        )
-        if (existing) {
-            if (window.PaystackPop) {
-                resolve()
+    paystackScriptPromise = new Promise(
+        (resolve, reject) => {
+            const existing = document.querySelector(
+                `script[src="${PAYSTACK_SCRIPT_SRC}"]`
+            )
+            if (existing) {
+                if (window.PaystackPop) {
+                    resolve()
+                    return
+                }
+                existing.addEventListener("load", () =>
+                    resolve()
+                )
+                existing.addEventListener("error", () =>
+                    reject(
+                        new Error(
+                            "Paystack script failed to load"
+                        )
+                    )
+                )
                 return
             }
-            existing.addEventListener("load", () => resolve())
-            existing.addEventListener("error", () =>
-                reject(
-                    new Error("Paystack script failed to load")
-                )
-            )
-            return
-        }
 
-        const script = document.createElement("script")
-        script.src = PAYSTACK_SCRIPT_SRC
-        script.async = true
-        script.onload = () => resolve()
-        script.onerror = () =>
-            reject(new Error("Paystack script failed to load"))
-        document.head.appendChild(script)
-    })
+            const script = document.createElement("script")
+            script.src = PAYSTACK_SCRIPT_SRC
+            script.async = true
+            script.onload = () => resolve()
+            script.onerror = () =>
+                reject(
+                    new Error(
+                        "Paystack script failed to load"
+                    )
+                )
+            document.head.appendChild(script)
+        }
+    )
 
     return paystackScriptPromise
 }
@@ -130,9 +143,7 @@ const DonationModal: React.FC<DonationModalProps> = ({
             const res = await fetch(
                 `/api/donations/verify?reference=${encodeURIComponent(reference)}`
             )
-            const data = await res
-                .json()
-                .catch(() => ({}))
+            const data = await res.json().catch(() => ({}))
             if (!res.ok) {
                 throw new Error(
                     data?.error || "Verification failed"
@@ -219,7 +230,9 @@ const DonationModal: React.FC<DonationModalProps> = ({
                 !data?.reference ||
                 !data?.publicKey
             ) {
-                throw new Error("Missing Paystack access data")
+                throw new Error(
+                    "Missing Paystack access data"
+                )
             }
 
             await loadPaystackScript()
@@ -245,9 +258,18 @@ const DonationModal: React.FC<DonationModalProps> = ({
                     payment_method: paymentMethod
                 },
                 callback: response => {
-                    void verifyDonation(
-                        response?.reference || data.reference
-                    )
+                    const referenceToVerify =
+                        response?.reference ??
+                        data.reference ??
+                        ""
+                    if (!referenceToVerify) {
+                        setIsSubmitting(false)
+                        setError(
+                            "Payment reference missing. Please try again."
+                        )
+                        return
+                    }
+                    void verifyDonation(referenceToVerify)
                 },
                 onClose: () => {
                     setIsSubmitting(false)
