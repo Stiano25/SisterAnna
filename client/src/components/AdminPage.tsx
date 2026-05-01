@@ -78,7 +78,25 @@ const applyGalleryImageOrder = (
         return { ...img, sortOrder: pos }
     })
 
-type AdminStep = "category" | "topics" | "gallery"
+type AdminStep =
+    | "category"
+    | "topics"
+    | "gallery"
+    | "donations"
+
+type AdminDonation = {
+    id: string
+    tx_ref: string
+    transaction_id: number
+    amount: number
+    currency: string
+    status: string
+    payment_method?: string | null
+    customer_name?: string | null
+    customer_email?: string | null
+    customer_phone?: string | null
+    created_at: string
+}
 
 interface AdminPageProps {
     onBack: () => void
@@ -111,6 +129,15 @@ const FieldHint: React.FC<{
         {children}
     </p>
 )
+
+const normalizeDonorEmail = (email?: string | null) => {
+    if (!email) return "-"
+    if (!email.includes("@")) return email
+    const lastUnderscore = email.lastIndexOf("_")
+    if (lastUnderscore <= 0) return email
+    const candidate = email.slice(lastUnderscore + 1)
+    return candidate.includes("@") ? candidate : email
+}
 
 const AdminPage: React.FC<AdminPageProps> = ({
     onBack
@@ -178,6 +205,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
     >([])
     const [galleryCategories, setGalleryCategories] =
         useState<AdminGalleryCategory[]>([])
+    const [donations, setDonations] = useState<
+        AdminDonation[]
+    >([])
     const [
         selectedGalleryCategoryId,
         setSelectedGalleryCategoryId
@@ -413,6 +443,14 @@ const AdminPage: React.FC<AdminPageProps> = ({
         setCategoryDraft(cat ?? {})
     }
 
+    const fetchDonations = async () => {
+        const res = await apiFetch("/admin/donations", {
+            method: "GET"
+        })
+        const data = (await res.json()) as AdminDonation[]
+        setDonations(data)
+    }
+
     useEffect(() => {
         if (!authToken) return
         void (async () => {
@@ -443,6 +481,23 @@ const AdminPage: React.FC<AdminPageProps> = ({
             })
         }
     }, [selectedCategoryId, categories])
+
+    useEffect(() => {
+        if (!authToken) return
+        if (adminStep !== "donations") return
+        void (async () => {
+            setError(null)
+            setLoading(true)
+            try {
+                await fetchDonations()
+            } catch (e) {
+                setError((e as Error).message)
+            } finally {
+                setLoading(false)
+            }
+        })()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [authToken, adminStep])
 
     useEffect(() => {
         if (!authToken) return
@@ -1885,6 +1940,34 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                     title="Photo gallery"
                                 >
                                     Gallery
+                                </button>
+                                <button
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={
+                                        adminStep ===
+                                        "donations"
+                                    }
+                                    onClick={() => {
+                                        if (
+                                            adminStep ===
+                                                "topics" &&
+                                            !confirmDiscardUnsavedStory()
+                                        )
+                                            return
+                                        setAdminStep(
+                                            "donations"
+                                        )
+                                    }}
+                                    className={`px-4 py-2.5 rounded-xl text-sm font-bold border transition-colors min-h-[44px] ${
+                                        adminStep ===
+                                        "donations"
+                                            ? "bg-memorial-accent text-memorial-card border-memorial-accent shadow-md"
+                                            : "bg-white/90 text-memorial-muted border-memorial-line hover:border-memorial-accent/50"
+                                    }`}
+                                    title="Donations"
+                                >
+                                    Donations
                                 </button>
                             </div>
                         </div>
@@ -3919,6 +4002,146 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                     </div>
                                 ) : null}
                             </div>
+                        </div>
+                    ) : adminStep === "donations" ? (
+                        <div className="max-w-6xl mx-auto space-y-4">
+                            <div className="rounded-2xl border border-memorial-line bg-memorial-card p-5 sm:p-6 shadow-sm">
+                                <div className="flex items-center justify-between gap-3 flex-wrap">
+                                    <div>
+                                        <div className="text-sm text-memorial-muted font-bold uppercase tracking-[0.1em]">
+                                            Donations
+                                        </div>
+                                        <p className="text-sm text-memorial-muted mt-1">
+                                            Latest donations
+                                            captured from
+                                            Paystack
+                                            verification.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            void fetchDonations()
+                                        }
+                                        className="px-4 py-2 rounded-full border border-memorial-line text-memorial-muted font-bold hover:border-memorial-accent/60 transition-colors disabled:opacity-50"
+                                        disabled={loading}
+                                    >
+                                        Refresh
+                                    </button>
+                                </div>
+                                <div className="mt-3 text-xs text-memorial-muted">
+                                    Total records:{" "}
+                                    {donations.length}
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-memorial-line bg-memorial-card p-4 sm:p-5 shadow-sm">
+                                {donations.length === 0 ? (
+                                    <p className="text-sm text-memorial-muted">
+                                        No donations
+                                        captured yet.
+                                    </p>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full text-left text-sm">
+                                            <thead>
+                                                <tr className="text-xs uppercase tracking-[0.08em] text-memorial-muted">
+                                                    <th className="py-2 pr-4">
+                                                        Date
+                                                    </th>
+                                                    <th className="py-2 pr-4">
+                                                        Donor
+                                                    </th>
+                                                    <th className="py-2 pr-4">
+                                                        Amount
+                                                    </th>
+                                                    <th className="py-2 pr-4">
+                                                        Method
+                                                    </th>
+                                                    <th className="py-2 pr-4">
+                                                        Status
+                                                    </th>
+                                                    <th className="py-2 pr-4">
+                                                        Email
+                                                    </th>
+                                                    <th className="py-2 pr-4">
+                                                        Phone
+                                                    </th>
+                                                    <th className="py-2 pr-4">
+                                                        Tx
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {donations.map(
+                                                    d => (
+                                                        <tr
+                                                            key={
+                                                                d.id
+                                                            }
+                                                            className="border-t border-memorial-line/70"
+                                                        >
+                                                            <td className="py-2 pr-4 text-xs text-memorial-muted whitespace-nowrap">
+                                                                {new Date(
+                                                                    d.created_at
+                                                                ).toLocaleString()}
+                                                            </td>
+                                                            <td className="py-2 pr-4 font-semibold text-memorial-ink">
+                                                                {d.customer_name ||
+                                                                    "-"}
+                                                            </td>
+                                                            <td className="py-2 pr-4 font-semibold text-memorial-ink whitespace-nowrap">
+                                                                {
+                                                                    d.currency
+                                                                }{" "}
+                                                                {Number(
+                                                                    d.amount
+                                                                ).toLocaleString()}
+                                                            </td>
+                                                            <td className="py-2 pr-4 text-xs uppercase text-memorial-muted">
+                                                                {d.payment_method ||
+                                                                    "-"}
+                                                            </td>
+                                                            <td
+                                                                className={`py-2 pr-4 text-xs font-semibold ${
+                                                                    d.status ===
+                                                                    "success"
+                                                                        ? "text-emerald-600"
+                                                                        : "text-amber-600"
+                                                                }`}
+                                                            >
+                                                                {
+                                                                    d.status
+                                                                }
+                                                            </td>
+                                                            <td className="py-2 pr-4 text-xs text-memorial-muted">
+                                                                {normalizeDonorEmail(
+                                                                    d.customer_email
+                                                                )}
+                                                            </td>
+                                                            <td className="py-2 pr-4 text-xs text-memorial-muted">
+                                                                {d.customer_phone ||
+                                                                    "-"}
+                                                            </td>
+                                                            <td className="py-2 pr-4 text-xs font-mono text-memorial-muted">
+                                                                {
+                                                                    d.transaction_id
+                                                                }
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+
+                            {error ? (
+                                <div className="text-sm text-red-600">
+                                    {error}
+                                </div>
+                            ) : null}
                         </div>
                     ) : (
                         <div className="max-w-6xl mx-auto">

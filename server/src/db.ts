@@ -138,6 +138,21 @@ CREATE TABLE IF NOT EXISTS admin_users (
   createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS donations (
+    id TEXT PRIMARY KEY,
+    tx_ref TEXT NOT NULL,
+    transaction_id BIGINT NOT NULL UNIQUE,
+    amount NUMERIC(12, 2) NOT NULL,
+    currency TEXT NOT NULL,
+    status TEXT NOT NULL,
+    payment_method TEXT,
+    customer_name TEXT,
+    customer_email TEXT,
+    customer_phone TEXT,
+    raw_payload JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 ALTER TABLE topics ADD COLUMN IF NOT EXISTS mission_status TEXT;
 ALTER TABLE topics ADD COLUMN IF NOT EXISTS support_link TEXT;
 ALTER TABLE topics ADD COLUMN IF NOT EXISTS video_url TEXT;

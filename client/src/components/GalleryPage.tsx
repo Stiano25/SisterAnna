@@ -5,6 +5,7 @@ import {
     Image as ImageIcon,
     X
 } from "lucide-react"
+import DonationLauncher from "./DonationLauncher"
 
 interface GalleryPageProps {
     onBack: () => void
@@ -114,6 +115,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({
                         </h1>
                     </div>
                     <div className="flex items-center gap-3">
+                        <DonationLauncher />
                         <ImageIcon
                             className="w-10 h-10 text-memorial-accent"
                             strokeWidth={0.8}

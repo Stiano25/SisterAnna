@@ -5,6 +5,7 @@ import ContentCard from "./ContentCard"
 import StoryReadingView from "./StoryReadingView"
 import PageLoader from "./PageLoader"
 import LucideDynamicIcon from "./LucideDynamicIcon"
+import DonationLauncher from "./DonationLauncher"
 import { categories } from "../data/content"
 import { CONTENT_UNAVAILABLE_MESSAGE } from "../constants/messages"
 import type {
@@ -367,6 +368,7 @@ const SubPage: React.FC<SubPageProps> = ({
                                 </h1>
                             </div>
                             <div className="flex items-center gap-3">
+                                <DonationLauncher />
                                 <LucideDynamicIcon
                                     name={sectionIconName}
                                     className="w-8 h-8 text-memorial-accent"

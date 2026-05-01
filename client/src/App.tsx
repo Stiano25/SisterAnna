@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react"
+import { Suspense, lazy, useEffect, useState } from "react"
 import { AnimatePresence } from "framer-motion"
 import { Helmet } from "react-helmet-async"
 import { useNavigation } from "./hooks/useNavigation"
@@ -6,6 +6,9 @@ import HeroScreen from "./components/HeroScreen"
 import ExplorerOverlay from "./components/ExplorerOverlay"
 import AdminPage from "./components/AdminPage"
 import PageLoader from "./components/PageLoader"
+import DonationStatusBanner from "./components/DonationStatusBanner"
+import DonationFloating from "./components/DonationFloating.tsx"
+import type { DonationStatus } from "./components/DonationModal"
 
 const SubPage = lazy(() => import("./components/SubPage"))
 const MissionPage = lazy(
@@ -74,6 +77,9 @@ const pageSeo: Record<
 function App() {
     const { currentPage, direction, goTo, goBack, reset } =
         useNavigation()
+    const [donationStatus, setDonationStatus] = useState<
+        DonationStatus | null
+    >(null)
     const seo = pageSeo[currentPage] ?? pageSeo.home
     const canonicalPath =
         currentPage === "home"
@@ -87,6 +93,17 @@ function App() {
     const robotsValue = seo.noindex
         ? "noindex, nofollow"
         : "index, follow"
+
+    useEffect(() => {
+        if (!donationStatus) return
+        if (donationStatus.status === "verifying") return
+        const timerId = window.setTimeout(() => {
+            setDonationStatus(null)
+        }, 5000)
+        return () => {
+            window.clearTimeout(timerId)
+        }
+    }, [donationStatus])
 
     const renderPage = () => {
         switch (currentPage) {
@@ -143,6 +160,19 @@ function App() {
 
     return (
         <div className="min-h-screen bg-memorial spiritual-root">
+            {donationStatus ? (
+                <DonationStatusBanner
+                    status={donationStatus.status}
+                    message={donationStatus.message}
+                    onClose={() => setDonationStatus(null)}
+                />
+            ) : null}
+            <DonationFloating
+                onStatus={
+                    (status: DonationStatus | null) =>
+                        setDonationStatus(status)
+                }
+            />
             <Helmet>
                 <title>{seo.title}</title>
                 <meta
