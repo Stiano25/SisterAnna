@@ -65,7 +65,7 @@ npm run dev
 
 ## Key Components
 
-- **HeroScreen**: Landing page with typewriter animation and cross icon
+- **HeroScreen**: Landing page with typewriter animation and portrait hero
 - **ExplorerOverlay**: Bottom sheet with search and category navigation
 - **CategoryGrid**: 3-column grid of content categories with Lucide icons
 - **SubPage**: Reusable page template for content categories
